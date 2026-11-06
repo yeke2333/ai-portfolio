@@ -1,6 +1,6 @@
 import {urbanShare} from './population.js';
 import {cityLabel, drawBirthCity, drawMoveCity} from './geography.js';
-import {cards,places,names,records} from './content.js';
+import {cards,places,names,records,eventPools,eventEffects} from './content.js?v=1.1.3';
 const clamp=n=>Math.max(0,Math.min(100,Math.round(n)));
 export const choiceOptions=card=>card.slice(4);
 export const randomChoice=(person,card)=>Math.floor(rand(person)*choiceOptions(card).length);
@@ -122,6 +122,13 @@ export function create(mode,seed=crypto.getRandomValues(new Uint32Array(1))[0],b
 }
 function releaseChoice(person,id,option){
   const {stats}=person;
+  const eventOptions=eventEffects.get(id);
+  if(eventOptions){
+    const [,stat,value]=eventOptions[option];
+    if(stat==='cash')person.cash+=value;
+    else stats[stat]+=value;
+    return;
+  }
   switch(id){
     case 'school-project':
     case 'internship':
@@ -147,7 +154,7 @@ function releaseChoice(person,id,option){
       break;
   }
 }
-function effect(p,id,n){let s=p.stats;switch(id){case'playground':p.scheduled.push({age:4,id,option:n});break;case'household':if(!n){p.family.push({role:'伴侣',age:p.age,joinedAt:p.age});s.ties+=5}else s.mood+=4;break;case'parenthood':if(!n)p.scheduled.push({age:p.age+1,id:'child'});else p.cash+=2000;break;case'school':n?s.mood+=4:s.ties+=5;break;case'hobby':n?s.ties+=5:s.skill+=5;break;case'education':p.education=n?'职业教育':'普通教育';s.skill+=n?4:6;if(n)p.cash+=1000;break;case'future':if(n){p.job='初入职场';p.scheduled.push({age:p.age+2,id:'first-job'});}else{p.education='继续学习';s.skill+=7}break;case'move':if(!n){p.cash-=6000;s.ties-=4;s.skill+=3;p.place=p.place===0?1:0;p.nextCity=drawMoveCity(p.city,rand(p));p.scheduled.push({age:p.age+2,id:'settle'})}else{s.ties+=4;p.scheduled.push({age:p.age+2,id:'local'})}break;case'career':if(n)p.cash+=4000;else s.skill+=6;p.job='在职';break;case'relationship':n?s.mood+=5:s.ties+=6;break;case'home':if(n){p.cash+=5000;s.mood-=2}else{s.ties+=5;p.cash-=2000}break;case'learning':s.skill+=n?3:7;if(!n)p.cash-=3000;break;case'money':if(n){s.mood+=6;p.cash-=2000}else p.cash+=3000;break;case'care':s.ties+=n?3:6;if(n)s.mood+=2;else p.cash-=3000;break;case'retire':if(!n)p.job='退休';else s.mood+=4;break;case'community':n?s.mood+=5:s.ties+=6;break;case'later':n?s.mood+=4:s.ties+=5;break;default:releaseChoice(p,id,n)}
+function effect(p,id,n){let s=p.stats;switch(id){case'playground':p.scheduled.push({age:4,id,option:n});break;case'household':if(!n){p.family.push({role:'伴侣',age:p.age,joinedAt:p.age});s.ties+=5}else s.mood+=4;break;case'parenthood':if(!n)p.scheduled.push({age:p.age+1,id:'child'});else p.cash+=2000;break;case'school':n?s.mood+=4:s.ties+=5;break;case'hobby':n?s.ties+=5:s.skill+=5;break;case'education':p.education=n?'职业教育':'普通教育';s.skill+=n?4:6;if(n)p.cash+=1000;break;case'future':if(n){p.job='初入职场';p.scheduled.push({age:p.age+2,id:'first-job'});}else{p.education='继续学习';s.skill+=7}break;case'move':if(!n){p.cash-=6000;s.ties-=4;s.skill+=3;p.nextPlace=p.place===0?1:0;p.nextCity=drawMoveCity(p.city,rand(p));p.scheduled.push({age:p.age+2,id:'settle'})}else{s.ties+=4;p.scheduled.push({age:p.age+2,id:'local'})}break;case'career':if(n)p.cash+=4000;else s.skill+=6;p.job='在职';break;case'relationship':n?s.mood+=5:s.ties+=6;break;case'home':if(n){p.cash+=5000;s.mood-=2}else{s.ties+=5;p.cash-=2000}break;case'learning':s.skill+=n?3:7;if(!n)p.cash-=3000;break;case'money':if(n){s.mood+=6;p.cash-=2000}else p.cash+=3000;break;case'care':s.ties+=n?3:6;if(n)s.mood+=2;else p.cash-=3000;break;case'retire':if(!n)p.job='退休';else s.mood+=4;break;case'community':n?s.mood+=5:s.ties+=6;break;case'later':n?s.mood+=4:s.ties+=5;break;default:releaseChoice(p,id,n)}
 Object.keys(s).forEach(k=>s[k]=clamp(s[k]));}
 export function resolve(p,card,n){effect(p,card[1],n);p.seen.push(card[1]);p.log.push({age:p.age,month:p.month,text:`「${card[2]}」你选择了${choiceOptions(card)[n][0]}。`,kind:"decision"})}
 export function advancePerson(p,focus,isPlayer){if(p.ended)return [];let s=p.stats;const birthday=(p.month+1)%12===0;if(birthday){if(focus==='learn')s.skill+=2;if(focus==='work'){s.skill++;}if(focus==='health')s.health+=2;if(focus==='ties')s.ties+=2;if(p.age>=45)s.health-=1;if(p.healthRoutine)s.health+=1;if(p.job==='在职'&&p.careerTrack==='专业岗位')s.skill+=1;if(p.job==='在职'&&p.careerTrack==='社区工作')s.ties+=1;Object.keys(s).forEach(k=>s[k]=clamp(s[k]));}if(p.age>=18)p.cash+=(annualIncome(p,focus)-annualExpenses(p))/12;
@@ -164,7 +171,12 @@ if(birthday){
 }
 if(p.age>=110||rand(p)<monthlyRisk(p.month,s.health)){p.ended=true;p.log.push({age:p.age,month:p.month,text:'这一段人生走到了终点。'});return []}
 if(!birthday)return [];
-const decisions=cards.filter(card=>eligible(p,card));
+const decisions=cards.filter(card=>!eventEffects.has(card[1])&&eligible(p,card));
+const pool=eventPools.get(p.age);
+if(pool){
+  const eventRoll={rng:(p.rng^Math.imul(p.age,0x9e3779b9))>>>0};
+  decisions.push(pool[Math.floor(rand(eventRoll)*pool.length)]);
+}
 if(decisions.length){
   if(isPlayer)return decisions.map(card=>({kind:"decision",id:card[1]}));
   for(const card of decisions)resolve(p,card,randomChoice(p,card));
@@ -209,6 +221,11 @@ export function prepareCalendar(run) {
     person.month ??= person.age * 12;
     person.city ??= ((run.seed >>> (i+1)) & 1);
     person.birthCity ??= person.city;
+    if(person.nextCity!==undefined&&person.nextPlace===undefined&&person.seen.includes('move')){
+      // Older saves updated the living environment before the scheduled move.
+      person.nextPlace=person.place;
+      person.place=person.birth;
+    }
     updateSchoolStage(person);
   }
   run.months ??= [{month:run.player.month,city:run.player.city}];
