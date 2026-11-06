@@ -450,9 +450,11 @@ function endingPanel(entry,archived=false){
   const title=el('h2',entry.player.name+'的一生');
   section.append(el('div','人生回顾 / LIFE IN PAGES','eyebrow'),title,
     el('p',summary.start+' 至 '+summary.end+' · '+summary.from+' → '+summary.to));
-  const art=el('figure',undefined,'register-art');
-  art.append(drawScene(entry.player,Number(summary.end.slice(-2))));
-  section.append(art);
+  if(archived){
+    const art=el('figure',undefined,'register-art');
+    art.append(drawScene(entry.player,Number(summary.end.slice(-2))));
+    section.append(art);
+  }
   const metrics=el('dl',undefined,'ending-metrics');
   for(const [label,value] of [['走过的年龄',entry.player.age+' 岁'],['做出的抉择',summary.decisions+' 次'],['生活过的城市',summary.places+' 座']]){
     const cell=el('div');cell.append(el('dt',label),el('dd',value));metrics.append(cell);
