@@ -6,6 +6,17 @@ export const choiceOptions=card=>card.slice(4);
 export const randomChoice=(person,card)=>Math.floor(rand(person)*choiceOptions(card).length);
 const careerTracks=['专业岗位','社区工作','自由职业'];
 
+function updateSchoolStage(person){
+  if(person.age<6)return;
+  if(person.education==='尚未入学'||person.education==null){
+    if(person.age<13)person.education='小学在读';
+    else if(person.age<=15)person.education='初中在读';
+    else person.education='已入学';
+  }else if(person.age>=13&&person.education==='小学在读'){
+    person.education='初中在读';
+  }
+}
+
 export function annualIncome(person, focus) {
   if(person.age<18)return 0;
   const {careerTrack,age}=person;
@@ -140,7 +151,17 @@ function effect(p,id,n){let s=p.stats;switch(id){case'playground':p.scheduled.pu
 Object.keys(s).forEach(k=>s[k]=clamp(s[k]));}
 export function resolve(p,card,n){effect(p,card[1],n);p.seen.push(card[1]);p.log.push({age:p.age,month:p.month,text:`「${card[2]}」你选择了${choiceOptions(card)[n][0]}。`,kind:"decision"})}
 export function advancePerson(p,focus,isPlayer){if(p.ended)return [];let s=p.stats;const birthday=(p.month+1)%12===0;if(birthday){if(focus==='learn')s.skill+=2;if(focus==='work'){s.skill++;}if(focus==='health')s.health+=2;if(focus==='ties')s.ties+=2;if(p.age>=45)s.health-=1;if(p.healthRoutine)s.health+=1;if(p.job==='在职'&&p.careerTrack==='专业岗位')s.skill+=1;if(p.job==='在职'&&p.careerTrack==='社区工作')s.ties+=1;Object.keys(s).forEach(k=>s[k]=clamp(s[k]));}if(p.age>=18)p.cash+=(annualIncome(p,focus)-annualExpenses(p))/12;
-p.month++;if(p.nextCity!==undefined){p.city=p.nextCity;p.place=p.nextPlace??p.place;delete p.nextCity;delete p.nextPlace;p.log.push({age:Math.floor(p.month/12),month:p.month,text:'你搬到了'+cityLabel(p.city)+'。',kind:'milestone'})}if(birthday){p.age++;if(p.age===22&&p.education==='继续学习'){p.education='完成进修';p.log.push({age:p.age,month:p.month,text:'你完成了进修，开始把所学用到新的生活里。',kind:'milestone'});}for(const item of p.scheduled.filter(x=>x.age===p.age))followUp(p,item);p.scheduled=p.scheduled.filter(x=>x.age!==p.age);}
+p.month++;if(p.nextCity!==undefined){p.city=p.nextCity;p.place=p.nextPlace??p.place;delete p.nextCity;delete p.nextPlace;p.log.push({age:Math.floor(p.month/12),month:p.month,text:'你搬到了'+cityLabel(p.city)+'。',kind:'milestone'})}
+if(birthday){
+  p.age++;
+  updateSchoolStage(p);
+  if(p.age===22&&p.education==='继续学习'){
+    p.education='完成进修';
+    p.log.push({age:p.age,month:p.month,text:'你完成了进修，开始把所学用到新的生活里。',kind:'milestone'});
+  }
+  for(const item of p.scheduled.filter(x=>x.age===p.age))followUp(p,item);
+  p.scheduled=p.scheduled.filter(x=>x.age!==p.age);
+}
 if(p.age>=110||rand(p)<monthlyRisk(p.month,s.health)){p.ended=true;p.log.push({age:p.age,month:p.month,text:'这一段人生走到了终点。'});return []}
 if(!birthday)return [];
 const decisions=cards.filter(card=>eligible(p,card));
@@ -188,6 +209,7 @@ export function prepareCalendar(run) {
     person.month ??= person.age * 12;
     person.city ??= ((run.seed >>> (i+1)) & 1);
     person.birthCity ??= person.city;
+    updateSchoolStage(person);
   }
   run.months ??= [{month:run.player.month,city:run.player.city}];
   return run;

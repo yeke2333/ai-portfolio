@@ -1,6 +1,6 @@
 const KEY='life-page.save.v1';
 import {cards,places,focusLabels} from './content.js';
-import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js';
+import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js?v=1.1.2';
 import {drawScene,drawTitleScene,seasonFor,drawAgeGrid,drawPortrait,familyAt,lifeStage} from './scene.js?v=1.1';
 import {archiveLife,completedLives,memoir} from './life-archive.js';
 import {drawSurvival} from './survival-view.js';
