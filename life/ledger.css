@@ -132,6 +132,24 @@ header { color:#285650; font-size:12px; }
 .life-state .stat-mood progress { --meter:#ac792e; }
 .life-state .stat-ties progress { --meter:#8b2044; }
 .life-money { display:grid; grid-template-columns:1fr 1fr; gap:8px; border-top:1px solid #d6e1db; padding-top:12px; margin-top:12px; }
+.life-money > div:first-child { grid-column:1 / -1; }
+.focus-panel p,.archive-shelf > p { margin:0 0 12px; font-size:13px; }
+.focus-options { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
+.focus-options button { padding:7px 4px; font-size:13px; }
+.focus-options button small { display:block; font-size:10px; }
+.focus-options button[aria-pressed="true"] { background:#1d6557; border-color:#1d6557; color:#fff; }
+.archive-shelf { margin:22px 0; }
+.archive-entry { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:9px 0; border-top:1px solid #d6e1db; }
+.archive-entry small { display:block; font-size:12px; color:#52665e; }
+.archive-entry button { flex-shrink:0; font-size:13px; padding:5px 9px; }
+.ending-panel { max-width:760px; margin:20px auto; border-top:4px solid #812442; }
+.ending-panel h2 { margin:3px 0; font-family:"Songti SC",SimSun,serif; font-size:clamp(26px,4vw,40px); }
+.ending-panel > p { font-size:13px; }
+.ending-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin:14px 0; border-block:1px solid #d6e1db; }
+.ending-metrics > div { padding:10px 6px; }
+.ending-metrics dt { font-size:12px; color:#52665e; }
+.ending-metrics dd { margin:0; font-size:clamp(17px,3vw,26px); font-weight:700; color:#19584a; }
+.ending-panel ol { padding-inline-start:1.5em; font-size:14px; color:#435b51; }
 .life-money span,.family-entry span,.survival-card p,.life-years p { font-size:12px; color:#52665e; }
 .life-money strong { display:block; overflow-wrap:anywhere; }
 .family-entry { display:flex; justify-content:space-between; gap:7px; padding:7px 0; border-top:1px solid #d6e1db; font-size:14px; }
@@ -177,6 +195,7 @@ header { color:#285650; font-size:12px; }
   .life-grid { grid-template-columns:minmax(0,1fr); grid-template-areas:"journal" "identity" "side"; }
 }
 @media(max-width:480px) {
+  .focus-options { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .life-grid { gap:16px; }
   .life-main,.life-side { gap:14px; }
   .birth-register { padding:17px; margin:22px 0; }

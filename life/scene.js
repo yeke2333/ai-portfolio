@@ -12,7 +12,8 @@ export function familyAt(person) {
   return person.family.map(member=>({
     ...member,
     currentAge:member.age+person.age-(member.joinedAt??0),
-    atHome:member.joinedAt!==undefined || (person.age<22&&person.city===person.birthCity),
+    atHome:member.role==='孩子'?person.age-member.joinedAt<22:
+      member.joinedAt!==undefined || (person.age<22&&person.city===person.birthCity),
   }));
 }
 

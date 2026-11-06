@@ -4,11 +4,23 @@ import {cards,places,names,records} from './content.js';
 const clamp=n=>Math.max(0,Math.min(100,Math.round(n)));
 export const choiceOptions=card=>card.slice(4);
 export const randomChoice=(person,card)=>Math.floor(rand(person)*choiceOptions(card).length);
+const careerTracks=['专业岗位','社区工作','自由职业'];
 
 export function annualIncome(person, focus) {
   if(person.age<18)return 0;
-  const base=person.job==='退休'?26000:person.job==='尚未工作'?10000:39000+person.stats.skill*350;
+  const {careerTrack,age}=person;
+  const base=person.job==='退休'?26000:person.job==='尚未工作'?10000:
+    careerTrack==='专业岗位'?46000+person.stats.skill*420:
+    careerTrack==='社区工作'?39000+person.stats.skill*260:
+    careerTrack==='自由职业'?32000+person.stats.skill*310+((age+person.birthCity)%5-2)*4400:
+    39000+person.stats.skill*350;
   return base+(focus==='work'?1800:0);
+}
+
+export function annualExpenses(person){
+  if(person.age<18)return 0;
+  const childCost=person.family.some(member=>member.role==='孩子'&&person.age-member.joinedAt<18)?6000:0;
+  return [39000,34000,27000,22000][person.place]+childCost+(person.improvedHome?3600:0);
 }
 
 function monthlyRisk(month,health) {
@@ -53,6 +65,18 @@ function followUp(person,item) {
       person.cash-=4000;
       text='一个新成员来到了家里。你开始适应新的家庭节奏，添置了第一批照护用品。';
       break;
+    case 'school-project':
+      if(item.option){stats.skill=clamp(stats.skill+4);text='学校展出了你画的地图，有同学拿着它去找你标记的小店。'}
+      else{stats.ties=clamp(stats.ties+4);text='你带着街坊讲过的故事参加了班会，一位同学也开始记录自己的家乡。'}
+      break;
+    case 'internship':
+      if(item.option){stats.skill=clamp(stats.skill+5);text='结课展示上，你的作品被老师留作下一届的参考。'}
+      else{person.job='在职';text='实习过的团队联系了你。你完成进修后，有了一份稳定的工作。'}
+      break;
+    case 'mentoring':
+      if(item.option){stats.mood=clamp(stats.mood+4);text='一位读者来信，说你的记录帮他少走了一段弯路。'}
+      else{stats.ties=clamp(stats.ties+4);text='两年前向你请教的新人独立完成了项目，特地回来和你分享消息。'}
+      break;
     default: {
       const chance=item.id==='settle'?(stats.skill>=50?.65:.4):Math.min(.8,.25+(stats.skill+stats.ties)/300);
       const success=rand(person)<chance;
@@ -82,14 +106,41 @@ export function create(mode,seed=crypto.getRandomValues(new Uint32Array(1))[0],b
     namesInUse.add(peer.name);
     return peer;
   });
-  return prepareCalendar({version:2,birthYear,birthMonth,birthGeography:'census2020',pace:'month',mode,seed,
+  return prepareCalendar({version:2,birthYear,birthMonth,birthGeography:'census2020',pace:'year',mode,seed,
     focus:'learn',auto:false,speed:1,pending:[],notes:[],player,peers});
 }
-function effect(p,id,n){let s=p.stats;switch(id){case'playground':p.scheduled.push({age:4,id,option:n});break;case'household':if(!n){p.family.push({role:'伴侣',age:p.age,joinedAt:p.age});s.ties+=5}else s.mood+=4;break;case'parenthood':if(!n)p.scheduled.push({age:p.age+1,id:'child'});else p.cash+=2000;break;case'school':n?s.mood+=4:s.ties+=5;break;case'hobby':n?s.ties+=5:s.skill+=5;break;case'education':p.education=n?'职业教育':'普通教育';s.skill+=n?4:6;if(n)p.cash+=1000;break;case'future':if(n){p.job='初入职场';p.scheduled.push({age:p.age+2,id:'first-job'});}else{p.education='继续学习';s.skill+=7}break;case'move':if(!n){p.cash-=6000;s.ties-=4;s.skill+=3;p.place=p.place===0?1:0;p.nextCity=drawMoveCity(p.city,rand(p));p.scheduled.push({age:p.age+2,id:'settle'})}else{s.ties+=4;p.scheduled.push({age:p.age+2,id:'local'})}break;case'career':if(n)p.cash+=4000;else s.skill+=6;p.job='在职';break;case'relationship':n?s.mood+=5:s.ties+=6;break;case'home':if(n){p.cash+=5000;s.mood-=2}else{s.ties+=5;p.cash-=2000}break;case'learning':s.skill+=n?3:7;if(!n)p.cash-=3000;break;case'money':if(n){s.mood+=6;p.cash-=2000}else p.cash+=3000;break;case'care':s.ties+=n?3:6;if(n)s.mood+=2;else p.cash-=3000;break;case'retire':if(!n)p.job='退休';else s.mood+=4;break;case'community':n?s.mood+=5:s.ties+=6;break;case'later':n?s.mood+=4:s.ties+=5}
+function releaseChoice(person,id,option){
+  const {stats}=person;
+  switch(id){
+    case 'school-project':
+    case 'internship':
+    case 'mentoring':
+      person.scheduled.push({age:person.age+2,id,option});
+      if(id==='internship'&&!option)person.cash+=4500;
+      break;
+    case 'career-track':
+      person.careerTrack=careerTracks[option];person.job='在职';
+      if(option===2)stats.mood+=5;
+      break;
+    case 'home-budget':
+      if(!option){person.improvedHome=true;person.cash-=8000;stats.mood+=6}
+      else person.cash+=2500;
+      break;
+    case 'health-plan':
+      if(!option){person.healthRoutine=true;stats.health+=6}
+      else{person.cash+=8000;stats.health-=4}
+      break;
+    case 'return-town':
+      if(!option){person.nextCity=person.birthCity;person.nextPlace=person.birth;person.cash-=4000}
+      stats.ties+=option?5:2;
+      break;
+  }
+}
+function effect(p,id,n){let s=p.stats;switch(id){case'playground':p.scheduled.push({age:4,id,option:n});break;case'household':if(!n){p.family.push({role:'伴侣',age:p.age,joinedAt:p.age});s.ties+=5}else s.mood+=4;break;case'parenthood':if(!n)p.scheduled.push({age:p.age+1,id:'child'});else p.cash+=2000;break;case'school':n?s.mood+=4:s.ties+=5;break;case'hobby':n?s.ties+=5:s.skill+=5;break;case'education':p.education=n?'职业教育':'普通教育';s.skill+=n?4:6;if(n)p.cash+=1000;break;case'future':if(n){p.job='初入职场';p.scheduled.push({age:p.age+2,id:'first-job'});}else{p.education='继续学习';s.skill+=7}break;case'move':if(!n){p.cash-=6000;s.ties-=4;s.skill+=3;p.place=p.place===0?1:0;p.nextCity=drawMoveCity(p.city,rand(p));p.scheduled.push({age:p.age+2,id:'settle'})}else{s.ties+=4;p.scheduled.push({age:p.age+2,id:'local'})}break;case'career':if(n)p.cash+=4000;else s.skill+=6;p.job='在职';break;case'relationship':n?s.mood+=5:s.ties+=6;break;case'home':if(n){p.cash+=5000;s.mood-=2}else{s.ties+=5;p.cash-=2000}break;case'learning':s.skill+=n?3:7;if(!n)p.cash-=3000;break;case'money':if(n){s.mood+=6;p.cash-=2000}else p.cash+=3000;break;case'care':s.ties+=n?3:6;if(n)s.mood+=2;else p.cash-=3000;break;case'retire':if(!n)p.job='退休';else s.mood+=4;break;case'community':n?s.mood+=5:s.ties+=6;break;case'later':n?s.mood+=4:s.ties+=5;break;default:releaseChoice(p,id,n)}
 Object.keys(s).forEach(k=>s[k]=clamp(s[k]));}
 export function resolve(p,card,n){effect(p,card[1],n);p.seen.push(card[1]);p.log.push({age:p.age,month:p.month,text:`「${card[2]}」你选择了${choiceOptions(card)[n][0]}。`,kind:"decision"})}
-export function advancePerson(p,focus,isPlayer){if(p.ended)return [];let s=p.stats;const birthday=(p.month+1)%12===0;if(birthday){if(focus==='learn')s.skill+=2;if(focus==='work'){s.skill++;}if(focus==='health')s.health+=2;if(focus==='ties')s.ties+=2;if(p.age>=45)s.health-=1;Object.keys(s).forEach(k=>s[k]=clamp(s[k]));}if(p.age>=18){const childCost=p.family.some(member=>member.role==='孩子'&&p.age-member.joinedAt<18)?6000:0;p.cash+=(annualIncome(p,focus)-[39000,34000,27000,22000][p.place]-childCost)/12}
-p.month++;if(p.nextCity!==undefined){p.city=p.nextCity;delete p.nextCity}if(birthday){p.age++;if(p.age===22&&p.education==='继续学习'){p.education='完成进修';p.log.push({age:p.age,month:p.month,text:'你完成了进修，开始把所学用到新的生活里。',kind:'milestone'});}for(const item of p.scheduled.filter(x=>x.age===p.age))followUp(p,item);p.scheduled=p.scheduled.filter(x=>x.age!==p.age);}
+export function advancePerson(p,focus,isPlayer){if(p.ended)return [];let s=p.stats;const birthday=(p.month+1)%12===0;if(birthday){if(focus==='learn')s.skill+=2;if(focus==='work'){s.skill++;}if(focus==='health')s.health+=2;if(focus==='ties')s.ties+=2;if(p.age>=45)s.health-=1;if(p.healthRoutine)s.health+=1;if(p.job==='在职'&&p.careerTrack==='专业岗位')s.skill+=1;if(p.job==='在职'&&p.careerTrack==='社区工作')s.ties+=1;Object.keys(s).forEach(k=>s[k]=clamp(s[k]));}if(p.age>=18)p.cash+=(annualIncome(p,focus)-annualExpenses(p))/12;
+p.month++;if(p.nextCity!==undefined){p.city=p.nextCity;p.place=p.nextPlace??p.place;delete p.nextCity;delete p.nextPlace;p.log.push({age:Math.floor(p.month/12),month:p.month,text:'你搬到了'+cityLabel(p.city)+'。',kind:'milestone'})}if(birthday){p.age++;if(p.age===22&&p.education==='继续学习'){p.education='完成进修';p.log.push({age:p.age,month:p.month,text:'你完成了进修，开始把所学用到新的生活里。',kind:'milestone'});}for(const item of p.scheduled.filter(x=>x.age===p.age))followUp(p,item);p.scheduled=p.scheduled.filter(x=>x.age!==p.age);}
 if(p.age>=110||rand(p)<monthlyRisk(p.month,s.health)){p.ended=true;p.log.push({age:p.age,month:p.month,text:'这一段人生走到了终点。'});return []}
 if(!birthday)return [];
 const decisions=cards.filter(card=>eligible(p,card));
@@ -106,6 +157,8 @@ return [];
 function eligible(person, card) {
   const [age,id]=card;
   if(person.seen.includes(id))return false;
+  if(id==='internship')return person.age===age&&person.education==='继续学习';
+  if(id==='return-town')return person.age===age&&person.city!==person.birthCity;
   if(id==='parenthood')return person.age===age&&person.family.some(member=>member.role==='伴侣');
   if(id==='move'){
     if(person.age<22||person.age>29||person.education==='继续学习')return false;
@@ -115,14 +168,13 @@ function eligible(person, card) {
   if(id==='retire')return person.age>=60&&person.age<=68&&person.job==='在职';
   return person.age===age;
 }
-export function advanceRun(current){
-  if(current.player.ended||current.pending.length)return current;
-  const run=structuredClone(current);
+function advanceMonth(run){
   run.pending=advancePerson(run.player,run.focus,true);
   run.peers.forEach((peer,index)=>advancePerson(peer,['learn','work','ties','health'][index],false));
   run.months.push({month:run.player.month,city:run.player.city});
-  return run;
 }
+
+export function advanceRun(current){return advancePeriod(current,'month')}
 
 export function prepareCalendar(run) {
   const legacy = run.version === 1;
@@ -141,13 +193,15 @@ export function prepareCalendar(run) {
   return run;
 }
 
-export function advancePeriod(run, pace = run.pace) {
-  const steps = pace === 'year' ? 12 : 1;
+function advanceSteps(current,steps){
+  if(current.pending.length||current.player.ended)return current;
+  const run=structuredClone(current);
   for(let step=0;step<steps;step++){
-    const next=advanceRun(run);
-    if(next===run)break;
-    run=next;
+    advanceMonth(run);
     if(run.pending.length||run.player.ended)break;
   }
   return run;
 }
+
+export function advancePeriod(run,pace=run.pace){return advanceSteps(run,pace==='year'?12:1)}
+export function advanceToDecision(run){return advanceSteps(run,1320)}
