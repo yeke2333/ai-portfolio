@@ -1,7 +1,7 @@
 const KEY='life-page.save.v1';
 import {cards,places,focusLabels} from './content.js';
 import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js';
-import {drawScene,drawAgeGrid,drawPortrait,familyAt,lifeStage} from './scene.js';
+import {drawScene,drawTitleScene,seasonFor,drawAgeGrid,drawPortrait,familyAt,lifeStage} from './scene.js?v=1.1';
 import {archiveLife,completedLives,memoir} from './life-archive.js';
 import {drawSurvival} from './survival-view.js';
 import {populationSinceOpen,populationClockSource} from './population-clock.js';
@@ -133,20 +133,77 @@ function mapPreview(){
   });
   return stage;
 }
-function render(){app.replaceChildren();queueMicrotask(updatePopulationClocks);if(screen==='home'){let hero=el('section',undefined,'hero');let intro=el('div',undefined,'hero-intro');intro.append(el('div','公开试玩 1.0 · 一段人生，一页一页展开','eyebrow'),el('h1','人生一页'),el('p','从一次随机的出生开始。在平凡的日子和重要的选择里，走过一段属于你的中国生活。'));let mode=el('select');mode.setAttribute('aria-label','推进节奏');[['quick','快览 · 较快推进'],['standard','标准 · 从容推进']].forEach(([v,t])=>{let o=el('option',t);o.value=v;mode.append(o)});let year=2002,birthMonth=1;let row=el('div',undefined,'row');row.append(field('出生年份',Array.from({length:lastYear-firstYear+1},(_,i)=>[String(firstYear+i),(firstYear+i)+' 年']),'2002',v=>{year=Number(v);paintStats()}),field('出生月份',Array.from({length:12},(_,i)=>[String(i+1),(i+1)+' 月']),'1',v=>birthMonth=Number(v)),mode,button('随机出生',()=>startNewLife(mode.value,year,birthMonth)));let saved=read();if(saved)row.append(button('继续上次人生',()=>{run=saved;selectedYear=null;screen=run.registration?'birth':'life';stop();if(run.player.ended)save();render()},'muted'));intro.append(row,populationClock());if(notice)intro.append(el('p',notice,'notice'));const art=el('div',undefined,'art');intro.append(art);
- function paintStats(){
-  art.replaceChildren(el('div','年度人口构成 / '+year,'eyebrow'),el('h2','出生环境抽样'));
+function homePage(){
+  let year=2002,birthMonth=1,mode='quick';
+  const hero=el('section',undefined,'hero pixel-home');
+  const intro=el('div',undefined,'hero-intro');
+  const title=el('h1','人生');
+  title.setAttribute('aria-label','人生一页');
+  title.append(el('span','一页'));
+  intro.append(el('div','中国人生模拟 / 公开试玩 1.1','eyebrow home-issue'),title,
+    el('p','选一个年月，让出生地交给运气。从陌生的街巷出发，在每一次选择里，走出自己的一生。','home-deck'));
+  const setup=el('div',undefined,'home-setup');
+  setup.append(
+    field('出生年份',Array.from({length:lastYear-firstYear+1},(_,i)=>[String(firstYear+i),(firstYear+i)+' 年']),String(year),v=>{year=Number(v);paintYear();paintStreet()}),
+    field('出生月份',Array.from({length:12},(_,i)=>[String(i+1),(i+1)+' 月']),String(birthMonth),v=>{birthMonth=Number(v);paintStreet()}),
+    field('推进节奏',[['quick','快览'],['standard','标准']],mode,v=>{mode=v}));
+  const actions=el('div',undefined,'row home-actions');
+  actions.append(button('随机出生',()=>startNewLife(mode,year,birthMonth),'birth-action'));
+  const saved=read();
+  if(saved)actions.append(button('继续上次人生',()=>{
+    run=saved;selectedYear=null;dismissedDecision=null;screen=run.registration?'birth':'life';stop();
+    if(run.player.ended)save();
+    render();
+  },'muted'));
+  intro.append(setup,actions,populationClock());
+  if(notice)intro.append(el('p',notice,'notice'));
+
+  const right=el('div',undefined,'home-right');
+  const street=el('figure',undefined,'home-street');
+  const streetHeader=el('div',undefined,'street-header');
+  const streetDate=el('span');
+  streetHeader.append(el('span','01 / 像素街景'),streetDate);
+  const streetImage=el('div',undefined,'street-image');
+  street.append(streetHeader,streetImage,el('figcaption','街灯刚亮，一户人家沿着街边走回家。'));
+  const stats=panel();
+  stats.classList.add('home-statistics');
+  right.append(street,stats);
+  hero.append(intro,right);
+
+  function paintStreet(){
+    streetDate.textContent=year+' · '+String(birthMonth).padStart(2,'0')+' / '+seasonFor(birthMonth)[1];
+    streetImage.replaceChildren(drawTitleScene(birthMonth,year));
+  }
+  function paintYear(){
+  stats.replaceChildren(el('div','年度人口构成 / '+year,'eyebrow'),el('h2','这一年，从哪里开始？'));
   const urban=urbanShare(year)*100;
   for(const [label,weight] of [['城镇',urban],['乡村',100-urban]]){
     const line=el('div',undefined,'birth-weight');const meter=el('progress');
     meter.max=100;meter.value=weight;meter.setAttribute('aria-label',label);
-    line.append(el('span',label),meter,el('strong',weight.toFixed(2)+'%'));art.append(line);
+    line.append(el('span',label),meter,el('strong',weight.toFixed(2)+'%'));stats.append(line);
   }
   const source=el('a','世界银行 WDI · 联合国人口司');
   source.href='https://data.worldbank.org/indicator/SP.URB.TOTL.IN.ZS?locations=CN';
-  art.append(el('p','按所选年的城乡人口占比模拟抽样。它是居民构成，非城乡新生儿比例。月份用于人生时间线，同年各月共用年度数据。'),source);
- }
- paintStats();hero.append(intro,mapPreview());app.append(hero);let info=panel('关于这段模拟');info.append(el('p','出生环境使用公开年度统计做抽样代理。角色家庭、城市落点、事件与风险仍含模拟设定，历史事实在地方志中单独标注。'));let a=el('a','国家统计局 · 第七次全国人口普查');a.href=censusSource;info.append(el('p','出生地覆盖中国大陆 31 个省级地区。省级权重按 2020 年常住人口固定计算，省内主要城市样本等概率抽取。'),a);if(saved)app.append(cohortPanel(saved.peers,saved.registration));app.append(archiveShelf(),info);return}
+  stats.append(el('p','出生环境按当年城乡居民占比抽样，同年各月共用一份数据。'),source);
+  }
+  paintStreet();paintYear();
+  const extras=el('section',undefined,'home-extras');
+  const atlas=el('div',undefined,'home-atlas');
+  atlas.append(el('div','02 / 地理档案','eyebrow'),el('h2','山河之间'),mapPreview());
+  const records=el('div',undefined,'home-records');
+  records.append(el('div','03 / 档案室','eyebrow'),el('h2','留在这里的人生'));
+  if(saved)records.append(cohortPanel(saved.peers,saved.registration));
+  const info=panel('关于这段模拟');
+  const source=el('a','国家统计局 · 第七次全国人口普查');
+  source.href=censusSource;
+  info.append(el('p','出生覆盖中国大陆 31 个省级地区。省级权重按 2020 年常住人口计算，省内主要城市样本等概率抽取。角色家庭和抉择为模拟设定，真实事件单独标注。'),source);
+  records.append(archiveShelf(),info);
+  extras.append(atlas,records);
+  app.append(hero,extras);
+}
+function render(){
+app.replaceChildren();queueMicrotask(updatePopulationClocks);
+if(screen==='home'){homePage();return}
 const p=run.player;
 if(screen==='archive'){app.append(endingPanel(run,true));return}
 if(screen==='birth'){
@@ -157,7 +214,12 @@ if(screen==='birth'){
     ? '省级抽取权重 '+(provinceWeight(birthCity.province)*100).toFixed(2)+'% · 省内主要城市样本等概率'
     : '沿用这段人生存档中的出生地';
   location.append(el('div','出生地 / '+dateAt(0),'eyebrow'),el('strong',cityLabel(p.birthCity)),el('small',weight));
-  c.append(location,el('h1',p.name),el('p',`${places[p.birth]} · ${dateAt(0)} · 家庭收入第 ${p.quintile} 组`),el('p','你的起点已经确定。未来的日子，会由选择、环境与偶然共同写下。'),button('开始这段人生',()=>{run.registration=false;screen='life';save();render()}),button('返回主界面',returnHome,'muted'));c.append(drawScene(p),cohortPanel(run.peers,true),populationClock());app.append(c);return
+  const art=el('figure',undefined,'register-art');
+  art.append(drawScene(p,run.birthMonth),el('figcaption',cityLabel(p.birthCity)+' / '+seasonFor(run.birthMonth)[1]));
+  const actions=el('div',undefined,'row register-actions');
+  actions.append(button('开始这段人生',()=>{run.registration=false;screen='life';save();render()}),button('返回主界面',returnHome,'muted'));
+  c.append(location,el('h1',p.name),el('p',`${places[p.birth]} · ${dateAt(0)} · 家庭收入第 ${p.quintile} 组`),art,actions,cohortPanel(run.peers,true),populationClock());
+  app.append(c);return
 }
 const top=el('nav',undefined,'life-toolbar');
 top.setAttribute('aria-label','人生导航');
@@ -176,7 +238,8 @@ const chapterText=el('div',undefined,'chapter-text');
 const household=familyAt(p).filter(member=>member.atHome);
 chapterText.append(el('h1',p.age+' 岁 '+p.month%12+' 个月'),el('p',cityLabel(p.city)+' · '+lifeStage(p.age)+' · '+(household.length?'与'+household.map(member=>member.role).join('、')+'同住':'独立生活')));
 const illustration=el('figure',undefined,'chapter-art');
-illustration.append(drawScene(p));
+const calendarMonth=Number(dateAt(p.month).slice(-2));
+illustration.append(drawScene(p,calendarMonth),el('figcaption',seasonFor(calendarMonth)[1]+' / '+dateAt(p.month)));
 chapter.append(illustration,chapterText);
 left.append(chapter);
 if(!p.ended){
@@ -387,6 +450,9 @@ function endingPanel(entry,archived=false){
   const title=el('h2',entry.player.name+'的一生');
   section.append(el('div','人生回顾 / LIFE IN PAGES','eyebrow'),title,
     el('p',summary.start+' 至 '+summary.end+' · '+summary.from+' → '+summary.to));
+  const art=el('figure',undefined,'register-art');
+  art.append(drawScene(entry.player,Number(summary.end.slice(-2))));
+  section.append(art);
   const metrics=el('dl',undefined,'ending-metrics');
   for(const [label,value] of [['走过的年龄',entry.player.age+' 岁'],['做出的抉择',summary.decisions+' 次'],['生活过的城市',summary.places+' 座']]){
     const cell=el('div');cell.append(el('dt',label),el('dd',value));metrics.append(cell);
