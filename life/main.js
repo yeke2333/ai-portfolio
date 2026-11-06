@@ -93,14 +93,17 @@ function populationClock(){
     el('p','按年度平均速度累计估算，非实时登记。'),source);
   return clock;
 }
-function cohortPanel(cohort,birth=false){
+function cohortPanel(life,birth=false){
+  const cohort=life.peers;
   const section=panel('在同一秒出生的人们');
   section.classList.add('cohort-panel');
   const living=cohort.filter(peer=>!peer.ended).length;
-  section.append(el('p',birth?'四位模拟同龄人将和你一起成长。':living+' / '+cohort.length+' 位同龄人仍在世 · 随你推进，各自生活。','cohort-caption'));
-  for(const peer of cohort){
-    const entry=el('div',undefined,'cohort-entry');
-    const who=el('div');
+  section.append(el('p',birth?'四位模拟同龄人将和你一起成长。':living+' / '+cohort.length+' 位同龄人仍在世 · 点击姓名查看人生档案。','cohort-caption'));
+  for(const [index,peer] of cohort.entries()){
+    const entry=button(undefined,()=>openPeerHistory(life,peer,entry,index),'cohort-entry');
+    entry.setAttribute('aria-label','查看'+peer.name+'的人生档案');
+    entry.setAttribute('aria-haspopup','dialog');
+    const who=el('span',undefined,'cohort-person');
     who.append(el('strong',peer.name),el('small',cityLabel(peer.birthCity)+' · '+
       (birth?'家庭收入第 '+peer.quintile+' 组':peer.city!==peer.birthCity?'现居 '+cityLabel(peer.city):places[peer.birth])));
     const state=peer.ended?'已离世 · '+peer.age+' 岁':birth?places[peer.birth]:
@@ -108,6 +111,58 @@ function cohortPanel(cohort,birth=false){
     entry.append(who,el('span',state,'cohort-state'));section.append(entry);
   }
   return section;
+}
+
+function openPeerHistory(life,peer,trigger,index){
+  const wasPlaying=playing;
+  if(wasPlaying)stop();
+  const date=month=>monthKey(life.birthYear,month,life.birthMonth);
+  const dialog=el('dialog',undefined,'decision-modal cohort-dialog');
+  dialog.setAttribute('aria-label',peer.name+'的人生档案');
+  const header=el('div',undefined,'decision-header');
+  header.append(el('span','同龄人档案 / PARALLEL LIFE','eyebrow'),
+    button('关闭档案',()=>dialog.close(),'muted'));
+
+  const body=el('div',undefined,'decision-body');
+  const title=el('div',undefined,'cohort-profile-title');
+  const identity=el('div');
+  const status=peer.ended?'已离世 · '+peer.age+' 岁':peer.age+' 岁 · '+lifeStage(peer.age);
+  identity.append(el('h2',peer.name),el('p',status+' · '+date(peer.month)));
+  title.append(drawPortrait(peer),identity);
+
+  const facts=el('dl',undefined,'cohort-facts');
+  for(const [label,value] of [
+    ['出生地',cityLabel(peer.birthCity)],
+    [peer.ended?'最后居住地':'现居地',cityLabel(peer.city)],
+    ['出生年月',date(0)],
+    ['教育',peer.education],
+    ['工作',peer.job],
+  ]){
+    const field=el('div');
+    field.append(el('dt',label),el('dd',value));
+    facts.append(field);
+  }
+
+  const timeline=el('ol',undefined,'cohort-timeline');
+  for(const entry of peer.log){
+    const row=el('li',undefined,'log-entry'+(entry.kind?' log-'+entry.kind:''));
+    const when=el('span',entry.age+' 岁');
+    if(Number.isInteger(entry.month))when.append(el('small',date(entry.month)));
+    row.append(when,el('p',entry.text));
+    timeline.append(row);
+  }
+  body.append(title,facts,el('h3','生活记录'),timeline);
+  if(!peer.ended)body.append(el('p','档案会随你推进人生而更新。','cohort-footnote'));
+  dialog.append(header,body);
+  dialog.addEventListener('close',()=>{
+    dialog.remove();
+    if(wasPlaying){
+      render();
+      app.querySelectorAll('.cohort-entry')[index]?.focus();
+    }else trigger.focus();
+  },{once:true});
+  app.append(dialog);
+  dialog.showModal();
 }
 function mapPreview(){
   const stage=el('div',undefined,'map-stage');
@@ -192,7 +247,7 @@ function homePage(){
   atlas.append(el('div','02 / 地理档案','eyebrow'),el('h2','山河之间'),mapPreview());
   const records=el('div',undefined,'home-records');
   records.append(el('div','03 / 档案室','eyebrow'),el('h2','留在这里的人生'));
-  if(saved)records.append(cohortPanel(saved.peers,saved.registration));
+  if(saved)records.append(cohortPanel(saved,saved.registration));
   const info=panel('关于这段模拟');
   const source=el('a','国家统计局 · 第七次全国人口普查');
   source.href=censusSource;
@@ -218,7 +273,7 @@ if(screen==='birth'){
   art.append(drawScene(p,run.birthMonth),el('figcaption',cityLabel(p.birthCity)+' / '+seasonFor(run.birthMonth)[1]));
   const actions=el('div',undefined,'row register-actions');
   actions.append(button('开始这段人生',()=>{run.registration=false;screen='life';save();render()}),button('返回主界面',returnHome,'muted'));
-  c.append(location,el('h1',p.name),el('p',`${places[p.birth]} · ${dateAt(0)} · 家庭收入第 ${p.quintile} 组`),art,actions,cohortPanel(run.peers,true),populationClock());
+  c.append(location,el('h1',p.name),el('p',`${places[p.birth]} · ${dateAt(0)} · 家庭收入第 ${p.quintile} 组`),art,actions,cohortPanel(run,true),populationClock());
   app.append(c);return
 }
 const top=el('nav',undefined,'life-toolbar');
@@ -328,7 +383,7 @@ for(const member of familyAt(p)){
   entry.append(el('strong',member.role),el('span',detail));
   family.append(entry);
 }
-const peers=cohortPanel(run.peers);
+const peers=cohortPanel(run);
 const ages=panel('人生地图');
 ages.classList.add('life-years');
 ages.append(el('p','一格 = 一年 · 实色为已经历'),drawAgeGrid(p));
