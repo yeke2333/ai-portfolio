@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="航海档案 07。一座可以环绕观看的三维微缩海洋，玻璃瓶内藏着帆船、灯塔与一片海床。">
+  <meta name="theme-color" content="#111816">
+  <title>瓶中航行 · AI 项目作品集</title>
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/portfolio.css">
+</head>
+<body class="voyage-page">
+  <header class="masthead shell">
+    <a class="brand" href="../"><span class="mark" aria-hidden="true">✳</span> AI 项目作品集</a>
+    <a class="index-link" href="../#projects"><span aria-hidden="true">←</span> 返回全部项目</a>
+  </header>
+  <main class="shell">
+    <section class="voyage-intro">
+      <div>
+        <p class="eyebrow"><span class="dot"></span> 航海档案 07 / WEB 3D</p>
+        <h1>瓶中航行</h1>
+      </div>
+      <p>灯塔照着水上的帆。<br>水下还有珊瑚、鱼群与沉入海床的箱子。</p>
+    </section>
+    <section class="viewer stage-sky" aria-label="可互动的瓶中航行三维场景">
+      <div class="stage-grid" aria-hidden="true"></div>
+      <div id="voyage-viewer" class="model-surface" data-voyage="viewer">
+        <img class="model-poster" src="./poster.webp" alt="玻璃瓶内的木帆船、灯塔和水下珊瑚礁">
+      </div>
+      <div class="viewer-meta" aria-hidden="true"><span>THE BOTTLED VOYAGE</span><span>SPECIMEN / 07</span></div>
+      <div class="specimen-plate" aria-hidden="true"><span>MARITIME ARCHIVE</span><strong>S.S. Aurelia</strong><small>玻璃封存的航线</small></div>
+      <div class="viewer-controls" aria-label="镜头控制">
+        <button type="button" id="orbit" disabled>暂停环绕</button>
+        <button type="button" id="reset" disabled>重置视角</button>
+        <button type="button" id="export" disabled>下载 8K PNG</button>
+      </div>
+    </section>
+    <p class="viewer-note" id="viewer-note" role="status">正在准备三维场景…</p>
+  </main>
+  <footer class="shell footer"><span>瓶中航行</span><a href="../#projects">返回项目索引 ↑</a></footer>
+  <script type="module" src="./view.js"></script>
+</body>
+</html>

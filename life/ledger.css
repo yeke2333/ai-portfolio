@@ -1,0 +1,183 @@
+:root { color-scheme: light; }
+body { background:#e9eeeb; color:#14252d; }
+main { max-width:1320px; }
+header { border-color:#bccbc6; color:#415d60; }
+button { background:#8b2044; border-color:#8b2044; }
+button:hover { background:#a42c53; }
+.muted { color:#25454a; border-color:#b2c4bf; background:#f8faf8; }
+.muted:hover { background:#e2ece6; }
+.eyebrow,.tag { color:#1a7169; }
+.card { background:#f5f8f6; border-color:#bdcbc7; padding:16px; border-radius:4px; box-shadow:0 1px 2px #14252d0d; }
+.card h2 { font-size:18px; }
+.hero { grid-template-columns:minmax(0,1.45fr) minmax(0,1fr); gap:clamp(24px,5vw,68px); min-height:0; padding-block:38px 18px; }
+.hero-intro,.map-stage { min-width:0; }
+.hero-intro > .row { margin-top:22px; }
+.population-clock { margin-top:20px; padding:12px 0 2px; border-top:1px solid #c5d4cb; }
+.population-counts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin:6px 0; }
+.population-counts strong { display:block; font:700 clamp(24px,4vw,35px)/1.2 Georgia,serif; font-variant-numeric:tabular-nums; color:#194b42; }
+.population-counts span,.population-clock p,.population-clock a { font-size:12px; }
+.population-clock p { display:inline; margin:0 8px 0 0; }
+.cohort-panel h2 { margin-bottom:4px; }
+.cohort-caption { font-size:12px; margin:0 0 10px; }
+.cohort-entry { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px; border-top:1px solid #d6e1db; padding:8px 0; }
+.cohort-entry small { display:block; color:#52665e; overflow-wrap:anywhere; }
+.cohort-state { font-size:12px; text-align:right; color:#2a6258; }
+.birth-register .cohort-panel { margin-top:20px; }
+.province-location,.province-sources { font-size:13px; margin:10px 0; }
+.province-stats { margin:8px 0 14px; }
+.province-stats div { display:flex; justify-content:space-between; gap:12px; padding:6px 0; border-bottom:1px solid #d6e1db; font-size:14px; }
+.province-stats dd { margin:0; font-weight:650; text-align:right; font-variant-numeric:tabular-nums; }
+.hero h1 { font-family:"Songti SC",SimSun,serif; }
+.hero .art { border:1px solid #bdcbc7; border-radius:4px; background:#f5f8f6; padding:24px; min-height:0; }
+.birth-weight { display:grid; grid-template-columns:5em minmax(0,1fr) 3em; align-items:center; gap:12px; margin:11px 0; }
+.birth-weight progress { width:100%; height:9px; accent-color:#1a7169; }
+.birth-weight strong { text-align:right; font-variant-numeric:tabular-nums; }
+.stat { display:grid; grid-template-columns:2.1em minmax(0,1fr) 2.3em; align-items:center; gap:6px; padding:4px 0; background:none; }
+.stat strong { font-size:13px; text-align:right; }
+.stat progress { width:100%; height:8px; accent-color:#1a7169; }
+.stats { grid-template-columns:1fr; }
+.age-grid { display:grid; grid-template-columns:repeat(11,minmax(0,1fr)); gap:3px; }
+.age-grid span { aspect-ratio:1; border-radius:2px; background:#d6e2dd; }
+.age-grid .lived { background:#67958a; }
+.age-grid .current { outline:2px solid #8b2044; outline-offset:-2px; }
+.choice { border-color:#bdcbc7; background:#f3f8f5; }
+.choice:hover { background:#dcece4; }
+button:focus-visible, select:focus-visible, textarea:focus-visible { outline:3px solid #1a7169; outline-offset:2px; }
+body { background:#e8eee9 radial-gradient(ellipse at 75% 4%,#f9f5e7 0,transparent 55%); }
+header { color:#285650; font-size:12px; }
+.hero h1 { color:#173b36; letter-spacing:-.08em; text-shadow:2px 3px #f5f2de; }
+.hero .art { position:relative; overflow:hidden; border-top:4px solid #2a6258; box-shadow:0 18px 40px #254b3d12; }
+.hero .art::before { content:""; position:absolute; right:-38px; top:-52px; width:155px; height:155px; border-radius:50%; background:repeating-radial-gradient(circle,#ad674e22 0 1px,transparent 2px 8px); pointer-events:none; }
+.birth-register { max-width:750px; margin:36px auto; padding:30px; border-top:7px solid #8b2044; background:repeating-linear-gradient(135deg,#f7faf5 0 22px,#f1f6f0 23px 24px); box-shadow:0 20px 42px #203b3420; }
+.birth-register canvas { width:100%; display:block; margin-top:24px; border-radius:8px; image-rendering:pixelated; }
+.birth-register h1 { font-size:clamp(38px,7vw,64px); margin:24px 0 8px; }
+.birth-register button { margin:4px 8px 4px 0; }
+.birth-location { display:grid; gap:4px; padding:18px 22px; background:#21453d; color:#fff5df; border-radius:8px; }
+.birth-location strong { font:700 clamp(24px,5vw,42px)/1.35 "Songti SC",SimSun,serif; }
+.birth-location .eyebrow,.birth-location small { color:#d2e4d9; }
+.chronicle { border-top:3px solid #2a6258; }
+.chronicle-date { font-family:"Songti SC",SimSun,serif; font-size:22px; font-weight:bold; margin-bottom:0; color:#1c4038; }
+.chronicle select { max-width:100%; }
+.fact { padding:13px 14px; margin:12px 0 0; background:#e7efea; border-left:3px solid #408779; }
+.fact h3 { margin:4px 0; font-size:18px; }
+.fact p { margin:4px 0; }
+.life-toolbar {
+  position:sticky; top:0; z-index:2;
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+  padding:12px 0; margin:0 auto 16px; max-width:1240px;
+  background:#eaf0eb; border-bottom:1px solid #bfcec6;
+}
+.life-position { display:grid; gap:1px; }
+.toolbar-age { font-size:15px; color:#24463d; font-variant-numeric:tabular-nums; }
+.return-home { flex-shrink:0; font-weight:700; padding:8px 14px; border-color:#67877b; }
+.return-home::before { content:"←"; margin-right:.55em; }
+.life-grid {
+  max-width:1240px; margin-inline:auto;
+  grid-template-areas:"identity journal side";
+  grid-template-columns:minmax(190px,1fr) minmax(350px,1.92fr) minmax(200px,1fr);
+  gap:clamp(14px,2vw,23px); align-items:start;
+}
+.life-main,.life-side,.life-identity { display:grid; gap:14px; min-width:0; }
+.life-main { grid-area:journal; }
+.life-side { grid-area:side; }
+.life-identity { grid-area:identity; }
+.life-grid .card { margin:0; padding:16px; border-radius:8px; }
+.life-grid .chapter {
+  padding:0; overflow:hidden; background:#f6f9f5;
+}
+.chapter-text { padding:12px 16px; display:flex; align-items:baseline; gap:5px 14px; flex-wrap:wrap; }
+.chapter h1 { margin:0; font:700 clamp(20px,2.1vw,29px)/1.2 "Songti SC",SimSun,serif; }
+.chapter p { margin:0; font-size:13px; }
+.chapter-art { margin:0; overflow:hidden; }
+.chapter-art canvas { display:block; width:100%; height:auto; image-rendering:pixelated; }
+.play-controls { display:grid; gap:8px; }
+.play-primary { gap:8px 12px; }
+.play-controls button,.play-controls select { padding:7px 11px; }
+.play-state { color:#376456; font-size:13px; font-weight:700; }
+.life-grid .life-details { padding:11px 16px; }
+.life-details summary { cursor:pointer; color:#254b42; font-size:14px; font-weight:700; }
+.life-details summary:focus-visible { outline:2px solid #1a7169; outline-offset:3px; }
+.life-details[open] summary { margin-bottom:10px; }
+.life-details p { font-size:14px; margin:8px 0; }
+.life-details small { display:block; }
+.play-controls .life-details { background:transparent; box-shadow:none; }
+.life-grid .life-decision { border-left:4px solid #8b2044; background:#fffaf2; }
+.life-decision h2 { margin:4px 0 8px; }
+.decision-modal { width:min(560px,calc(100% - 26px)); max-height:calc(100% - 24px); padding:0; color:#14252d; border:1px solid #b9ccc3; border-radius:12px; background:#f6f9f5; box-shadow:0 20px 70px #152a2880; }
+.decision-modal::backdrop { background:#172d31a6; }
+.decision-header { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 18px; border-bottom:1px solid #cbd9d1; }
+.decision-header .eyebrow { color:#8b2044; }
+.decision-header button,.decision-body > .muted { padding:5px 12px; font-size:13px; }
+.decision-body { padding:18px; }
+.decision-body h2 { font-size:clamp(21px,4vw,28px); }
+.decision-option { display:flex; align-items:baseline; gap:14px; padding:10px 12px; }
+.decision-number { color:#6b827a; font-variant-numeric:tabular-nums; }
+.decision-option small { margin-top:3px; }
+.life-grid .profile-card { padding:0; overflow:hidden; }
+.profile-card h2 { padding:9px 16px; margin:0; background:#812442; color:#fff3ed; font-size:14px; letter-spacing:.12em; }
+.id-body { padding:14px 16px; }
+.id-name { display:flex; align-items:center; gap:12px; margin-bottom:12px; font-size:23px; }
+.id-portrait { display:block; width:55px; height:auto; image-rendering:pixelated; border-radius:4px; }
+.profile-lines { display:grid; gap:7px; margin:0 0 15px; font-size:14px; }
+.profile-lines > div { display:grid; grid-template-columns:5em 1fr; gap:6px; }
+.profile-lines dt { color:#596257; }
+.profile-lines dd { margin:0; font-weight:650; }
+.profile-card .profile-lines { margin-bottom:0; }
+.life-state .stats { gap:4px; font-size:13px; }
+.life-state .stat progress { appearance:none; height:7px; border:0; border-radius:2px; overflow:hidden; background:#d8e3dd; --meter:#287d70; }
+.life-state progress::-webkit-progress-bar { background:#d8e3dd; }
+.life-state progress::-webkit-progress-value { background:var(--meter); }
+.life-state progress::-moz-progress-bar { background:var(--meter); }
+.life-state .stat-health progress { --meter:#347d57; }
+.life-state .stat-mood progress { --meter:#ac792e; }
+.life-state .stat-ties progress { --meter:#8b2044; }
+.life-money { display:grid; grid-template-columns:1fr 1fr; gap:8px; border-top:1px solid #d6e1db; padding-top:12px; margin-top:12px; }
+.life-money span,.family-entry span,.survival-card p,.life-years p { font-size:12px; color:#52665e; }
+.life-money strong { display:block; overflow-wrap:anywhere; }
+.family-entry { display:flex; justify-content:space-between; gap:7px; padding:7px 0; border-top:1px solid #d6e1db; font-size:14px; }
+.survival-card svg { display:block; width:100%; font-size:9px; fill:#52665e; }
+.survival-card p,.life-years p { margin:4px 0; }
+.life-log { border:0; padding:0; margin:0; max-height:360px; overflow:auto; }
+.log-entry { display:grid; grid-template-columns:3.2em 1fr; gap:8px; padding:9px 0; border-bottom:1px solid #dbe4dd; }
+.log-entry span { font-size:12px; color:#60766e; }
+.log-entry p { margin:0; font-size:14px; }
+.log-decision p { color:#812442; font-weight:600; }
+.log-milestone p { color:#1b6556; }
+.atlas { position:relative; margin:0; padding:16px 18px; overflow:hidden; border:1px solid #57796a; border-radius:14px; color:#edf1da; background:radial-gradient(ellipse at 52% 40%,#254c42,#102c25 78%); box-shadow:0 24px 45px #254b3d22; }
+.atlas figcaption { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:4px 10px; font-size:11px; letter-spacing:.12em; color:#c2d5bb; }
+.atlas figcaption strong { font-family:"Songti SC",SimSun,serif; color:#fff3d2; font-size:21px; }
+.atlas-preview img { display:block; width:100%; height:auto; margin:10px 0; border-radius:7px; }
+.atlas-preview small[hidden] { display:none; }
+.atlas canvas { display:block; width:100%; height:auto; touch-action:none; cursor:grab; }
+.atlas canvas:active { cursor:grabbing; }
+.atlas-controls { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.atlas-controls button { padding:3px 10px; min-height:34px; background:#244b40; border-color:#557e6c; color:#fff2d2; }
+.atlas-controls label { display:inline-flex; gap:5px; align-items:center; margin-left:4px; font-size:12px; }
+.atlas-controls input { max-width:100px; accent-color:#dbad74; }
+.atlas-legend { display:flex; align-items:center; gap:8px; margin:-4px 0 12px; color:#d4e3d5; font-size:11px; }
+.atlas-legend i { width:108px; height:6px; border-radius:3px; background:linear-gradient(to right,#448b76,#9caf77,#bea875,#f1ead6); }
+.atlas-places { display:flex; flex-wrap:wrap; gap:6px 12px; margin-top:9px; }
+.atlas-places label { color:#d4e3d5; font-size:12px; }
+.atlas-places select { max-width:11em; padding:5px 6px; border-color:#557e6c; background:#244b40; color:#fff2d2; }
+.atlas small { display:block; color:#c2d5bb; margin-top:7px; }
+.atlas-sources a { color:inherit; }
+.hero .art { margin-top:24px; padding:15px 18px; }
+.hero .art h2 { margin-bottom:6px; font-size:19px; }
+.hero .art p { margin:8px 0; font-size:13px; }
+.hero .art a { font-size:12px; }
+.birth-weight { grid-template-columns:3em minmax(0,1fr) 4.3em; }
+@media(max-width:600px) { .atlas { padding:10px; } }
+@media(max-width:1050px) {
+  .life-grid { grid-template-columns:minmax(0,1fr) minmax(220px,.62fr); grid-template-areas:"journal identity" "journal side"; }
+}
+@media(max-width:850px) {
+  .hero { grid-template-columns:1fr; gap:20px; padding-block:24px 10px; }
+}
+@media(max-width:700px) {
+  .life-grid { grid-template-columns:minmax(0,1fr); grid-template-areas:"journal" "identity" "side"; }
+}
+@media(max-width:480px) {
+  .life-grid { gap:16px; }
+  .life-main,.life-side { gap:14px; }
+  .birth-register { padding:17px; margin:22px 0; }
+}

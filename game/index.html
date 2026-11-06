@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>暗夜幸存者：血月试炼</title>
+    <link rel="icon" href="../assets/mark.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="portfolio-bar">
+      <a href="../">← 返回 AI 项目作品集</a>
+      <span>游戏原型 / 02</span>
+    </header>
+    <main class="app">
+      <section class="game-card">
+        <div class="game-topbar">
+          <div><span class="label">Survive</span><strong id="timeText">00:00</strong></div>
+          <div><span class="label">Level</span><strong id="levelText">1</strong></div>
+          <div><span class="label">Kills</span><strong id="killText">0</strong></div>
+          <div><span class="label">Gold</span><strong id="goldText">0</strong></div>
+          <div><span class="label">Build</span><strong id="powerText">0</strong></div>
+        </div>
+
+        <div class="canvas-wrap">
+          <canvas id="game" width="1024" height="576" aria-label="暗夜幸存者网页游戏画面"></canvas>
+
+          <div class="game-actions">
+            <button id="pauseButton" type="button">暂停</button>
+            <button id="soundButton" type="button">音效：开</button>
+            <button id="exitButton" type="button">退出</button>
+          </div>
+
+          <div id="bossBar" class="boss-bar hidden">
+            <span id="bossName">血月领主</span>
+            <div><i id="bossHp"></i></div>
+          </div>
+
+          <section id="startPanel" class="modal menu-panel">
+            <div class="title-scene" aria-hidden="true">
+              <span class="blood-moon"></span>
+              <span class="castle-shape"></span>
+            </div>
+            <p class="eyebrow">Steam Survivors-like Vertical Slice</p>
+            <h1>暗夜幸存者：血月试炼</h1>
+            <p class="intro">一局 5 分钟的哥特像素割草体验：局前构筑、自动武器、随机升级、精英宝箱、Boss 压力波次和完整结算闭环。</p>
+            <div class="feature-row">
+              <span>自动弹幕</span>
+              <span>随机 Build</span>
+              <span>血月 Boss</span>
+              <span>宝箱奖励</span>
+            </div>
+
+            <div class="select-grid">
+              <div>
+                <h2>选择角色</h2>
+                <div id="characterOptions" class="option-grid"></div>
+              </div>
+              <div>
+                <h2>选择难度</h2>
+                <div id="difficultyOptions" class="option-grid"></div>
+              </div>
+              <div>
+                <h2>初始武器</h2>
+                <div id="weaponOptions" class="option-grid"></div>
+              </div>
+            </div>
+
+            <button id="startButton" class="primary-button start-cta" type="button">开始试炼</button>
+          </section>
+
+          <section id="levelUpPanel" class="modal level-panel hidden">
+            <p class="eyebrow">Level Up</p>
+            <h2>选择一个强化</h2>
+            <div id="upgradeList" class="upgrade-list"></div>
+          </section>
+
+          <section id="chestPanel" class="modal chest-panel hidden">
+            <p class="eyebrow">Treasure Chest</p>
+            <h2>血月宝箱</h2>
+            <div id="chestReward" class="reward-card"></div>
+            <button id="chestButton" class="primary-button" type="button">收下奖励</button>
+          </section>
+
+          <section id="pausePanel" class="modal pause-panel hidden">
+            <p class="eyebrow">Paused</p>
+            <h2>试炼暂停</h2>
+            <p class="intro">按 P 或点击继续返回战斗。当前局可以随时退出回到选择界面。</p>
+            <button id="resumeButton" class="primary-button" type="button">继续</button>
+          </section>
+
+          <section id="resultPanel" class="modal result-panel hidden">
+            <p id="resultEyebrow" class="eyebrow">Result</p>
+            <h2 id="resultTitle">结算</h2>
+            <div id="resultStats" class="result-stats"></div>
+            <button id="againButton" class="primary-button" type="button">重新选择</button>
+          </section>
+        </div>
+        <div class="touch-controls" aria-label="触屏移动">
+          <button data-direction="ArrowLeft" type="button" aria-label="向左移动">←</button>
+          <button data-direction="ArrowUp" type="button" aria-label="向上移动">↑</button>
+          <button data-direction="ArrowDown" type="button" aria-label="向下移动">↓</button>
+          <button data-direction="ArrowRight" type="button" aria-label="向右移动">→</button>
+        </div>
+      </section>
+
+      <aside class="side-panel">
+        <section>
+          <h2>状态</h2>
+          <div class="bar-row"><span>生命</span><div class="meter"><i id="hpBar"></i></div><b id="hpText">100/100</b></div>
+          <div class="bar-row"><span>经验</span><div class="meter exp"><i id="xpBar"></i></div><b id="xpText">0/24</b></div>
+          <div class="meta-list">
+            <p><b>角色</b><span id="sideCharacter">-</span></p>
+            <p><b>难度</b><span id="sideDifficulty">-</span></p>
+            <p><b>目标</b><span>坚持 5 分钟</span></p>
+          </div>
+        </section>
+
+        <section>
+          <h2>武器构筑</h2>
+          <ul id="buildList" class="build-list"></ul>
+        </section>
+
+        <section>
+          <h2>局内事件</h2>
+          <ul id="eventList" class="event-list"></ul>
+        </section>
+
+        <section>
+          <h2>操作</h2>
+          <p>用 WASD、方向键或屏幕上的方向按钮移动，按 P 或点击暂停。武器自动攻击，经验宝石会在拾取范围内吸附。击杀精英会掉宝箱。</p>
+        </section>
+      </aside>
+    </main>
+
+    <script src="./game.js"></script>
+  </body>
+</html>

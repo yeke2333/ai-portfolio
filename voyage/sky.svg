@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 820" preserveAspectRatio="none">
+  <defs>
+    <linearGradient id="cloud" x2="0" y2="1">
+      <stop stop-color="#1b2826" stop-opacity=".16"/>
+      <stop offset=".65" stop-color="#30443a" stop-opacity=".28"/>
+      <stop offset="1" stop-color="#9b8a60" stop-opacity=".14"/>
+    </linearGradient>
+    <linearGradient id="sea" x2="0" y2="1">
+      <stop stop-color="#193735" stop-opacity=".24"/>
+      <stop offset="1" stop-color="#112023" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="11 5"/></filter>
+  </defs>
+  <g filter="url(#soft)" fill="url(#cloud)">
+    <path d="M-80 242c94-42 155-28 211-45 107-33 201-39 331-15 80 15 143 5 190 1-116 39-214 25-325 26-107 1-233 44-407 33z"/>
+    <path d="M782 254c91-9 148-34 249-38 66-3 104 12 162 5 67-8 142-28 256-28v56c-88-15-172-4-247 12-100 21-255 21-420-7z"/>
+    <path d="M-70 356c123-20 206-45 308-49 80-3 155 13 244 3 110-12 150-28 227-27-107 38-202 56-336 59-158 4-295 40-443 33z"/>
+    <path d="M775 374c129-26 184-54 313-60 121-6 240 7 356-13v39c-106 30-212 4-344 15-109 10-233 34-325 19z"/>
+  </g>
+  <path d="M0 541c229-7 431-7 645-3 213 4 465-9 755-2v121H0z" fill="url(#sea)" filter="url(#soft)"/>
+  <path d="M0 543c292-3 405-10 650-5 279 6 455-4 750 0" fill="none" stroke="#b7a47b" stroke-opacity=".14" stroke-width="2"/>
+</svg>

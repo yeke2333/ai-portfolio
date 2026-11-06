@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="个人 AI 项目作品集。探索瓶中航行、雨夜便利店、暗夜幸存者和人生一页四个互动原型。">
+  <meta name="theme-color" content="#100e1b">
+  <title>AI 项目作品集</title>
+  <link rel="icon" href="./assets/mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./assets/portfolio.css">
+</head>
+<body>
+  <header class="masthead shell" id="top">
+    <a class="brand" href="./" aria-label="AI 项目作品集首页"><span class="mark" aria-hidden="true">✳</span> AI 项目作品集</a>
+    <a class="index-link" href="#projects">全部项目 <span aria-hidden="true">↘</span></a>
+  </header>
+  <main class="shell">
+    <section class="hero" aria-labelledby="portfolio-heading">
+      <div class="hero-content">
+        <p class="eyebrow"><span class="dot"></span> PERSONAL AI PORTFOLIO</p>
+        <h1 id="portfolio-heading">AI 项目<span>实验室</span></h1>
+        <p class="hero-copy">转动一座雨夜街角，驶入瓶中的海，开一局生存挑战，或从一次随机出生走过一段人生。</p>
+        <div class="hero-actions">
+          <a class="primary-action" href="./voyage/">进入瓶中航行 <span aria-hidden="true">↗</span></a>
+          <a class="secondary-action" href="#projects">浏览全部项目 <span aria-hidden="true">↓</span></a>
+        </div>
+      </div>
+      <div class="hero-stage stage-sky" aria-label="瓶中航行的实时三维预览">
+        <div class="stage-grid" aria-hidden="true"></div>
+        <div class="hero-ring" aria-hidden="true"></div>
+        <span class="stage-corner stage-corner-start" aria-hidden="true"></span>
+        <span class="stage-corner stage-corner-end" aria-hidden="true"></span>
+        <div id="voyage-preview" class="model-surface" data-voyage="preview" aria-hidden="true">
+          <img class="model-poster" src="./voyage/poster.webp" alt="">
+        </div>
+        <div class="stage-caption"><span>03 / 瓶中航行</span><span class="live-label">WEB 3D</span></div>
+      </div>
+    </section>
+    <section id="projects" aria-labelledby="projects-title">
+      <div class="section-bar"><h2 id="projects-title">精选项目</h2><span>PROJECT INDEX / 04</span></div>
+      <div class="project-grid">
+        <article class="project">
+          <a class="project-link" href="./konbini/">
+            <div class="art konbini">
+              <img src="./assets/konbini.webp" alt="" loading="lazy" width="900" height="520">
+              <span class="plate">01 / WEB 3D</span>
+            </div>
+            <div class="project-text"><p class="type">互动三维 · THREE.JS</p><h3>雨夜便利店</h3><p>日式街角微缩场景。观看街景从零件逐步组装，拖动旋转并放大查看窗内陈设。</p><span class="action">查看 3D 场景 <span aria-hidden="true">↗</span></span></div>
+          </a>
+        </article>
+        <article class="project">
+          <a class="project-link" href="./game/">
+            <div class="art survival">
+              <img src="./assets/survival.webp" alt="" loading="lazy" width="900" height="520">
+              <span class="plate">02 / GAME</span>
+            </div>
+            <div class="project-text"><p class="type">游戏原型 · CANVAS</p><h3>暗夜幸存者</h3><p>五分钟生存挑战。选择角色、难度和初始武器，在自动战斗中拾取经验、构筑武器并挑战 Boss。</p><span class="action">开始试玩 <span aria-hidden="true">↗</span></span></div>
+          </a>
+        </article>
+        <article class="project">
+          <a class="project-link" href="./voyage/">
+            <div class="art voyage-art">
+              <img src="./voyage/poster.webp" alt="" loading="lazy" width="1100" height="660">
+              <span class="plate">03 / WEB 3D</span>
+            </div>
+            <div class="project-text">
+              <p class="type">互动三维 · THREE.JS</p><h3>瓶中航行</h3>
+              <p>玻璃瓶里的帆船循着灯塔航行。透过瓶壁，还能看到海床上的珊瑚、鱼群和沉箱。</p>
+              <span class="action">打开三维模型 <span aria-hidden="true">↗</span></span>
+            </div>
+          </a>
+        </article>
+        <article class="project">
+          <a class="project-link" href="./life/">
+            <div class="art life-art">
+              <img src="./assets/life.png" alt="人生一页的像素生活场景与人生档案" loading="lazy" width="1440" height="940">
+              <span class="plate">04 / SIMULATION</span>
+            </div>
+            <div class="project-text">
+              <p class="type">叙事模拟 · WEB GAME</p><h3>人生一页</h3>
+              <p>随机出生在中国的一座城市，和同龄人一起成长。按月或按年推进，体验关键抉择，并查看所居省份的年度档案。</p>
+              <span class="action">开始一段人生 <span aria-hidden="true">↗</span></span>
+            </div>
+          </a>
+        </article>
+      </div>
+    </section>
+  </main>
+  <footer class="shell footer"><span>AI 项目作品集</span><a href="#top">回到顶部 ↑</a></footer>
+  <script type="module" src="./voyage/view.js"></script>
+</body>
+</html>
