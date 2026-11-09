@@ -1,4 +1,5 @@
 import {eventCards} from './life-events.js';
+import {journeyCards} from './life-systems.js';
 export {eventPools,eventEffects} from './life-events.js';
 
 export const places=['大城市','普通城市','县城','乡村'];
@@ -30,5 +31,5 @@ export const cards=[
 [62,'retire','新的生活节奏','你希望怎样安排接下来的日子？',['逐步退休','工作状态变为退休'],['继续做喜欢的工作','心情 +4']],
 [72,'community','熟悉的街坊','社区有一些活动邀请你参加。',['参加活动','关系 +6'],['在家做喜欢的事','心情 +5']],
 [84,'later','生活的照护','你希望如何安排日常照护？',['与家人商量','关系 +5'],['寻求社区支持','心情 +4']],
-...eventCards
+...eventCards,...journeyCards
 ];

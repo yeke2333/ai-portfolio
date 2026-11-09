@@ -1,6 +1,6 @@
 const KEY='life-page.save.v1';
-import {cards,places,focusLabels} from './content.js?v=1.1.3';
-import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js?v=1.1.3';
+import {cards,places,focusLabels} from './content.js?v=1.2';
+import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js?v=1.2';
 import {drawScene,drawTitleScene,seasonFor,drawAgeGrid,drawPortrait,familyAt,lifeStage} from './scene.js?v=1.1';
 import {archiveLife,completedLives,memoir} from './life-archive.js';
 import {drawSurvival} from './survival-view.js';
@@ -195,7 +195,7 @@ function homePage(){
   const title=el('h1','人生');
   title.setAttribute('aria-label','人生一页');
   title.append(el('span','一页'));
-  intro.append(el('div','中国人生模拟 / 公开试玩 1.1','eyebrow home-issue'),title,
+  intro.append(el('div','中国人生模拟 / 公开试玩 1.2','eyebrow home-issue'),title,
     el('p','选一个年月，让出生地交给运气。从陌生的街巷出发，在每一次选择里，走出自己的一生。','home-deck'));
   const setup=el('div',undefined,'home-setup');
   setup.append(
@@ -374,12 +374,33 @@ for(const [label,value] of [['现金余额',yuan.format(p.cash)],['年收入',p.
   cell.append(el('span',label),amount);money.append(cell);
 }
 state.append(stats,money);
+const journey=panel('一路积累的经历');
+journey.append(el('p','探索兴趣 '+p.interests.curiosity+' · 交往经历 '+p.interests.sociability),
+  el('p','家人亲密度 '+p.relationships.family+' · 友情 '+p.relationships.friend),
+  el('small','早年的选择会影响后续遇到的机会。'));
 identity.append(profile,state);
+identity.append(journey);
+if(p.age>=18){
+  const budget=panel('月度账单');
+  budget.classList.add('budget-panel');
+  budget.append(el('p','借款余额 '+yuan.format(p.debt)));
+  if(p.lastBill){
+    const bill=p.lastBill;
+    budget.append(el('div',monthKey(run.birthYear,bill.month,run.birthMonth)+' / 最近一次结算','eyebrow'));
+    const lines=el('dl',undefined,'province-stats');
+    for(const [label,value] of [['收入',bill.income],['生活开支',bill.expenses],['借款利息',bill.interest],['新增借款',bill.borrowed],['偿还借款',bill.repaid]]){
+      const row=el('div');row.append(el('dt',label),el('dd',yuan.format(value)));lines.append(row);
+    }
+    budget.append(lines);
+  }
+  budget.append(el('small','模拟规则 · 借款月息 0.3%，月度收支结余的 20% 自动还款。'));
+  left.append(budget);
+}
 const family=panel('家人与生活');
 family.classList.add('family-panel');
 for(const member of familyAt(p)){
   const entry=el('div',undefined,'family-entry');
-  const detail=member.currentAge>110?'家庭档案':member.currentAge+' 岁 · '+(member.atHome?'同住':'家人');
+  const detail=member.currentAge>110?'家庭档案':member.currentAge+' 岁 · '+(member.atHome?'同住':'家人')+' · 亲密度 '+(member.bond??p.relationships.family);
   entry.append(el('strong',member.role),el('span',detail));
   family.append(entry);
 }
