@@ -1,7 +1,7 @@
 export const journeyCards=[
   [14,'journey-curiosity','一直没有放下的好奇心','小时候反复动手尝试的经历，让你留意到了一次作品展示机会。',['认真准备一份作品','技能 +6，两年后得到展示反馈'],['邀请伙伴一起完成','关系 +5，两年后再次合作']],
   [26,'journey-network','一位旧识的邀请','过去积累的交往，让一位旧识想到了你，邀请你参与一项短期合作。',['花时间尝试合作','技能 +5，资金 +2000'],['保持联系，暂缓合作','关系 +5']],
-  [0,'budget-pressure','这个月的账单','支出超过了可用现金，缺口已记入借款。你需要安排接下来的几个月。',['压缩一部分生活开支','未来一年生活开支降低，心情 −2'],['接一些额外工作','未来一年增加劳动收入，健康 −3'],['借一笔周转金','现金 +3000，同时增加借款；每月计息']],
+  [0,'budget-pressure','这个月的账单','支出超过了可用现金，缺口已记入借款。你需要安排接下来的几个月。',['压缩一部分生活开支','未来一年生活开支降低 15%，心情 −2'],['接一些额外工作','未来一年每月增加收入 600 元，健康 −3'],['借一笔周转金','现金 +3000，同时增加借款；每月计息']],
   [35,'family-time','一次认真相处的约定','亲近的人提起，最近大家都很忙。你想怎样照顾这段关系？',['定期一起吃饭或散步','家人亲密度 +8，心情 +3'],['先倾听，再一起安排','家人亲密度 +5，关系 +4']],
   [50,'friend-reunion','多年后的再次见面','童年时一起玩的朋友联系了你，问你愿不愿意找个时间见一面。',['赴约聊聊各自的生活','友情 +8，心情 +4'],['认真回信，约定继续联系','友情 +5，关系 +4']],
 ];
@@ -64,8 +64,8 @@ export function journeyEligible(person,id){
 }
 export function settleMonth(person,income,expenses){
   prepareJourney(person);
-  const extraWork=person.month<(person.extraWorkUntil??0)&&person.job!=='退休'&&person.job!=='尚未工作';
-  const earned=income/12*(extraWork?1.12:1);
+  const extraWork=person.month<(person.extraWorkUntil??0);
+  const earned=income/12+(extraWork?600:0);
   const spent=expenses/12*(person.month<(person.frugalUntil??0)?.85:1);
   const interest=person.debt*.003;
   person.debt+=interest;
