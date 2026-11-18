@@ -42,7 +42,7 @@ export function journeyEffect(person,id,index){
       if(index===0){person.frugalUntil=person.month+12;stats.mood-=2;}
       else if(index===1){person.extraWorkUntil=person.month+12;stats.health-=3;}
       else{person.debt+=3000;person.cash+=3000;}
-      person.budgetReview=person.month+12;
+      person.budgetReview=Math.max(person.budgetReview??0,person.month+12);
       break;
     case 'family-time':
       relationships.family=clamp(relationships.family+(index?5:8));

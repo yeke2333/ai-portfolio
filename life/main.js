@@ -1,6 +1,7 @@
 const KEY='life-page.save.v1';
-import {cards,places,focusLabels} from './content.js?v=1.2';
-import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js?v=1.2';
+import {cards,places,focusLabels} from './content.js?v=1.3';
+import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js?v=1.3';
+import {localConditions,studyBudget,sharedStages,stageDifference} from './life-context.js?v=1.3';
 import {drawScene,drawTitleScene,seasonFor,drawAgeGrid,drawPortrait,familyAt,lifeStage} from './scene.js?v=1.1';
 import {archiveLife,completedLives,memoir} from './life-archive.js';
 import {drawSurvival} from './survival-view.js';
@@ -151,7 +152,7 @@ function openPeerHistory(life,peer,trigger,index){
     row.append(when,el('p',entry.text));
     timeline.append(row);
   }
-  body.append(title,facts,el('h3','生活记录'),timeline);
+  body.append(title,facts,cohortComparison(life,peer),el('h3','生活记录'),timeline);
   if(!peer.ended)body.append(el('p','档案会随你推进人生而更新。','cohort-footnote'));
   dialog.append(header,body);
   dialog.addEventListener('close',()=>{
@@ -163,6 +164,48 @@ function openPeerHistory(life,peer,trigger,index){
   },{once:true});
   app.append(dialog);
   dialog.showModal();
+}
+
+function cohortComparison(life,peer){
+  const player=life.player;
+  const section=el('section',undefined,'cohort-comparison');
+  section.append(el('h3','同龄对照'));
+  const stages=sharedStages(player,peer);
+  if(!stages.length){
+    section.append(el('p','这两位角色暂无同龄阶段记录。旧档会从续玩时开始积累。'));
+    return section;
+  }
+  const first=stages.find(pair=>stageDifference(pair,player,peer).length);
+  const summary=first
+    ? '现有记录中，最早在 '+first.age+' 岁出现'+stageDifference(first,player,peer).join('、')+'差异。'
+    : '现有的同龄记录尚无升学、职业、迁居或家庭分岔。';
+  const table=el('table');
+  const header=el('tr');
+  for(const label of ['阶段','你 · '+player.name,peer.name]){
+    const cell=el('th',label);cell.scope='col';header.append(cell);
+  }
+  const head=el('thead');head.append(header);
+  const values=el('tbody');
+  table.append(head,values);
+  function show(age){
+    const pair=stages.find(item=>item.age===Number(age));
+    const family=stage=>[stage.partner?'有伴侣':'无伴侣',stage.children+' 位子女'].join(' · ');
+    values.replaceChildren();
+    for(const [label,left,right] of [
+      ['居住地',cityLabel(pair.player.city),cityLabel(pair.peer.city)],
+      ['教育',pair.player.education,pair.peer.education],
+      ['职业',pair.player.work,pair.peer.work],
+      ['家庭',family(pair.player),family(pair.peer)],
+    ]){
+      const row=el('tr'),name=el('th',label);
+      name.scope='row';
+      row.append(name,el('td',left),el('td',right));values.append(row);
+    }
+  }
+  const age=String(first?.age??stages.at(-1).age);
+  section.append(el('p',summary),field('选择年龄',stages.map(item=>[String(item.age),item.age+' 岁']),age,show),table);
+  show(age);
+  return section;
 }
 function mapPreview(){
   const stage=el('div',undefined,'map-stage');
@@ -195,7 +238,7 @@ function homePage(){
   const title=el('h1','人生');
   title.setAttribute('aria-label','人生一页');
   title.append(el('span','一页'));
-  intro.append(el('div','中国人生模拟 / 公开试玩 1.2','eyebrow home-issue'),title,
+  intro.append(el('div','中国人生模拟 / 公开试玩 1.3','eyebrow home-issue'),title,
     el('p','选一个年月，让出生地交给运气。从陌生的街巷出发，在每一次选择里，走出自己的一生。','home-deck'));
   const setup=el('div',undefined,'home-setup');
   setup.append(
@@ -269,6 +312,10 @@ if(screen==='birth'){
     ? '省级抽取权重 '+(provinceWeight(birthCity.province)*100).toFixed(2)+'% · 省内主要城市样本等概率'
     : '沿用这段人生存档中的出生地';
   location.append(el('div','出生地 / '+dateAt(0),'eyebrow'),el('strong',cityLabel(p.birthCity)),el('small',weight));
+  if(localConditions(p).pilot){
+    const opportunity=run.birthYear<2000?'本地带教岗位':'平台运营入门机会';
+    location.append(el('small','城市试点 · 成年后若仍居住在试点城市，可能遇到'+opportunity+'。工资与开支按游戏参数模拟。'));
+  }
   const art=el('figure',undefined,'register-art');
   art.append(drawScene(p,run.birthMonth),el('figcaption',cityLabel(p.birthCity)+' / '+seasonFor(run.birthMonth)[1]));
   const actions=el('div',undefined,'row register-actions');
@@ -374,6 +421,9 @@ for(const [label,value] of [['现金余额',yuan.format(p.cash)],['年收入',p.
   cell.append(el('span',label),amount);money.append(cell);
 }
 state.append(stats,money);
+if(localConditions(p).pilot){
+  state.append(el('p','城市试点 · 工资与开支使用当地游戏参数。','cohort-caption'));
+}
 const journey=panel('一路积累的经历');
 journey.append(el('p','探索兴趣 '+p.interests.curiosity+' · 交往经历 '+p.interests.sociability),
   el('p','家人亲密度 '+p.relationships.family+' · 友情 '+p.relationships.friend),
@@ -384,6 +434,10 @@ if(p.age>=18){
   const budget=panel('月度账单');
   budget.classList.add('budget-panel');
   budget.append(el('p','借款余额 '+yuan.format(p.debt)));
+  if(p.education==='继续学习'){
+    const {support,tuition}=studyBudget(p);
+    budget.append(el('p','在读期间预计每月支持 '+yuan.format(support)+' · 学费 '+yuan.format(tuition)));
+  }
   if(p.lastBill){
     const bill=p.lastBill;
     budget.append(el('div',monthKey(run.birthYear,bill.month,run.birthMonth)+' / 最近一次结算','eyebrow'));
