@@ -63,7 +63,7 @@ export function recordLifeStage(person,force=false){
   const age=person.age;
   const stage={
     month:person.month,city:person.city,education:person.education,
-    work:person.job==='在职'?(person.careerTrack??person.job):person.job,
+    work:person.job==='在职'||person.job==='初入职场'?(person.occupation??person.careerTrack??person.job):person.job,
     partner:person.family.some(member=>member.role==='伴侣'),
     children:person.family.filter(member=>member.role==='孩子').length,
   };

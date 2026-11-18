@@ -1,10 +1,10 @@
 const KEY='life-page.save.v1';
-import {cards,places,focusLabels} from './content.js?v=1.3';
-import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js?v=1.3';
-import {localConditions,studyBudget,sharedStages,stageDifference} from './life-context.js?v=1.3';
-import {drawScene,drawTitleScene,seasonFor,drawAgeGrid,drawPortrait,familyAt,lifeStage} from './scene.js?v=1.1';
+import {cards,places,focusLabels} from './content.js?v=1.4';
+import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js?v=1.4';
+import {localConditions,studyBudget,sharedStages,stageDifference} from './life-context.js?v=1.4';
+import {drawScene,drawTitleScene,seasonFor,drawAgeGrid,drawPortrait,familyAt,lifeStage} from './scene.js?v=1.4';
 import {archiveLife,completedLives,memoir} from './life-archive.js';
-import {drawSurvival} from './survival-view.js';
+import {drawSurvival} from './survival-view.js?v=1.4';
 import {populationSinceOpen,populationClockSource} from './population-clock.js';
 import {monthKey,getMonthHistory} from './history.js';
 import {censusSource,cities,cityLabel,provinceWeight} from './geography.js';
@@ -41,11 +41,11 @@ function read(){
     return prepareCalendar(value);
   }catch{notice='旧存档暂时无法读取。你仍可开始新人生。';return null}
 }
-function startNewLife(mode,year,month,seed){
+function startNewLife(mode,year,month,seed,identity){
   const previous=read();
   if((previous&&!previous.player.ended||!previous&&hasSavedData())&&!confirm('开始新人生会替换当前进度，确定继续吗？'))return;
   if(previous?.player.ended){run=previous;screen='life';save()}
-  run=create(mode,seed,year,month);
+  run=create(mode,seed,year,month,identity);
   run.registration=true;selectedYear=null;dismissedDecision=null;
   screen='birth';save();render();
 }
@@ -55,14 +55,105 @@ function tick(pace=run?.pace){if(!run||run.player.ended||run.pending.length){sto
 function auto(){while(run.pending.length){let x=run.pending.shift();if(x.kind==='decision'){let c=cards.find(a=>a[1]===x.id);resolve(run.player,c,randomChoice(run.player,c))}}}
 function start(){
   if(run.pending.length||run.player.ended)return;
+  resumeTimer();
+  render();
+}
+function resumeTimer(){
   stop();playing=true;
   const annualDelay=run.mode==='quick'?2250:7500;
   const stepDelay=run.pace==='month'?Math.max(600,annualDelay/12):annualDelay;
-  timer=setInterval(()=>tick(),Math.max(180,stepDelay/run.speed));render();
+  timer=setInterval(()=>tick(),Math.max(180,stepDelay/run.speed));
+}
+function startAuto(){
+  run.auto=true;
+  dismissedDecision=null;
+  auto();
+  save();
+  start();
 }
 function el(tag,text,cls){let x=document.createElement(tag);if(text!==undefined)x.textContent=text;if(cls)x.className=cls;return x}
 function button(label,fn,cls){let b=el('button',label,cls);b.type='button';b.onclick=fn;return b}
 function panel(title){let x=el('section',undefined,'card');if(title)x.append(el('h2',title));return x}
+
+function inspector(section){
+  const tip=el('div',undefined,'inspect-tip');
+  tip.setAttribute('role','status');
+  tip.hidden=true;
+  section.classList.add('has-inspector');
+  section.append(tip);
+  const hide=()=>{tip.hidden=true;};
+  section.addEventListener('pointerleave',event=>{if(event.pointerType==='mouse')hide();});
+  section.addEventListener('focusout',event=>{if(!section.contains(event.relatedTarget))hide();});
+  section.addEventListener('keydown',event=>{if(event.key==='Escape')hide();});
+  return (title,lines,anchor)=>{
+    tip.replaceChildren(el('strong',title),...lines.map(line=>el('p',line)));
+    tip.hidden=false;
+    const maxLeft=Math.max(8,window.innerWidth-tip.offsetWidth-8);
+    tip.style.left=Math.min(maxLeft,Math.max(8,anchor.left+anchor.width/2-tip.offsetWidth/2))+'px';
+    const above=anchor.top-tip.offsetHeight-8;
+    tip.style.top=(above>=8?above:Math.max(8,Math.min(anchor.bottom+8,window.innerHeight-tip.offsetHeight-8)))+'px';
+  };
+}
+
+function openRecord(title,tag,trigger,fill){
+  const wasPlaying=playing;
+  if(wasPlaying)stop();
+  const dialog=el('dialog',undefined,'decision-modal record-dialog');
+  dialog.setAttribute('aria-label',title);
+  const header=el('div',undefined,'decision-header');
+  header.append(el('span',tag,'eyebrow'),button('关闭资料卡',()=>dialog.close(),'muted'));
+  const body=el('div',undefined,'decision-body');
+  body.append(el('h2',title));
+  fill(body);
+  dialog.append(header,body);
+  dialog.addEventListener('close',()=>{
+    dialog.remove();
+    if(wasPlaying&&screen==='life'&&!run.player.ended){
+      resumeTimer();
+    }
+    trigger.focus();
+  },{once:true});
+  app.append(dialog);
+  dialog.showModal();
+}
+
+function openFamilyRecord(member,person,trigger){
+  openRecord(member.name,'家人资料 · '+member.role,trigger,body=>{
+    const isParent=member.role==='母亲'||member.role==='父亲';
+    const facts=el('dl',undefined,'cohort-facts');
+    const details=[
+      ['与主角关系',member.role],['性别',member.gender??'未记录'],
+      ['年龄',member.currentAge>110?'档案年龄超过显示范围':member.currentAge+' 岁'],
+      ['亲密度',String(member.bond??person.relationships.family)],
+      ['家庭状态',member.atHome?'同住':'分开居住'],
+      [isParent?'进入档案':'加入家庭',isParent?'主角出生时':(member.joinedAt??0)+' 岁'],
+    ];
+    for(const [label,value] of details){
+      const line=el('div');
+      line.append(el('dt',label),el('dd',value));
+      facts.append(line);
+    }
+    body.append(drawPortrait({age:member.currentAge,gender:member.gender}),facts);
+  });
+}
+
+function openEventRecord(entry,trigger){
+  const card=cards.find(candidate=>candidate[1]===entry.cardId||
+    (!entry.cardId&&entry.kind==='decision'&&entry.text.startsWith('「'+candidate[2]+'」')));
+  const title=card?.[2]??(entry.kind==='milestone'?'人生节点':'生活片段');
+  const tag=card?.[1].startsWith('future-')?'未来推演':'生活记录';
+  const month=entry.month??(entry.age===0?0:undefined);
+  const city=entry.city??run.months.find(item=>item.month===month)?.city;
+  const time=entry.age+' 岁'+(Number.isInteger(month)?' · '+dateAt(month):'');
+  openRecord(title,tag,trigger,body=>{
+    body.append(el('p',time+(city===undefined?'':' · '+cityLabel(city)),'eyebrow'));
+    if(card)body.append(el('p',card[3]));
+    body.append(el('p',entry.text));
+    const options=card?choiceOptions(card):[];
+    const option=options[entry.option]??options.find(([label])=>entry.text.endsWith('你选择了'+label+'。'));
+    if(option)body.append(el('p','选择影响 · '+option[1]));
+  });
+}
 function disclosure(title){
   const details=el('details',undefined,'card life-details');
   details.open=openSections.has(title);
@@ -71,7 +162,18 @@ function disclosure(title){
   details.append(heading);
   return details;
 }
-function field(label,options,value,change){let wrap=el('label',label+' ');let s=el('select');for(let [v,t] of options){let o=el('option',t);o.value=v;s.append(o)}s.value=value;s.onchange=()=>change(s.value);wrap.append(s);return wrap}
+function field(label,options,value,change){
+  const wrap=el('label',label+' ');
+  const select=el('select');
+  select.setAttribute('aria-label',label);
+  for(const [value,text] of options){
+    const option=el('option',text);option.value=value;select.append(option);
+  }
+  select.value=value;
+  select.onchange=()=>change(select.value);
+  wrap.append(select);
+  return wrap;
+}
 function updatePopulationClocks(){
   const clocks=app.querySelectorAll('.population-clock');
   if(!clocks.length)return;
@@ -137,7 +239,8 @@ function openPeerHistory(life,peer,trigger,index){
     [peer.ended?'最后居住地':'现居地',cityLabel(peer.city)],
     ['出生年月',date(0)],
     ['教育',peer.education],
-    ['工作',peer.job],
+    ['性别',peer.gender??'未记录'],
+    ['工作',peer.occupation?peer.job+' · '+peer.occupation:peer.job],
   ]){
     const field=el('div');
     field.append(el('dt',label),el('dd',value));
@@ -232,13 +335,13 @@ function mapPreview(){
   return stage;
 }
 function homePage(){
-  let year=2002,birthMonth=1,mode='quick';
+  let year=2002,birthMonth=1,mode='quick',gender='';
   const hero=el('section',undefined,'hero pixel-home');
   const intro=el('div',undefined,'hero-intro');
   const title=el('h1','人生');
   title.setAttribute('aria-label','人生一页');
   title.append(el('span','一页'));
-  intro.append(el('div','中国人生模拟 / 公开试玩 1.3','eyebrow home-issue'),title,
+  intro.append(el('div','中国人生模拟 / 公开试玩 1.4','eyebrow home-issue'),title,
     el('p','选一个年月，让出生地交给运气。从陌生的街巷出发，在每一次选择里，走出自己的一生。','home-deck'));
   const setup=el('div',undefined,'home-setup');
   setup.append(
@@ -246,14 +349,20 @@ function homePage(){
     field('出生月份',Array.from({length:12},(_,i)=>[String(i+1),(i+1)+' 月']),String(birthMonth),v=>{birthMonth=Number(v);paintStreet()}),
     field('推进节奏',[['quick','快览'],['standard','标准']],mode,v=>{mode=v}));
   const actions=el('div',undefined,'row home-actions');
-  actions.append(button('随机出生',()=>startNewLife(mode,year,birthMonth),'birth-action'));
+  const identity=el('div',undefined,'home-setup birth-identity');
+  const nameLabel=el('label','自定义姓名');
+  const name=el('input');
+  name.type='text';name.maxLength=40;name.placeholder='留空随机生成';name.autocomplete='off';
+  nameLabel.append(name);
+  identity.append(field('性别',[['','随机'],['女','女'],['男','男']],gender,value=>{gender=value}),nameLabel);
+  actions.append(button('随机出生',()=>startNewLife(mode,year,birthMonth,undefined,{gender,name:name.value}),'birth-action'));
   const saved=read();
   if(saved)actions.append(button('继续上次人生',()=>{
     run=saved;selectedYear=null;dismissedDecision=null;screen=run.registration?'birth':'life';stop();
     if(run.player.ended)save();
     render();
   },'muted'));
-  intro.append(setup,actions,populationClock());
+  intro.append(setup,identity,actions,populationClock());
   if(notice)intro.append(el('p',notice,'notice'));
 
   const right=el('div',undefined,'home-right');
@@ -320,7 +429,7 @@ if(screen==='birth'){
   art.append(drawScene(p,run.birthMonth),el('figcaption',cityLabel(p.birthCity)+' / '+seasonFor(run.birthMonth)[1]));
   const actions=el('div',undefined,'row register-actions');
   actions.append(button('开始这段人生',()=>{run.registration=false;screen='life';save();render()}),button('返回主界面',returnHome,'muted'));
-  c.append(location,el('h1',p.name),el('p',`${places[p.birth]} · ${dateAt(0)} · 家庭收入第 ${p.quintile} 组`),art,actions,cohortPanel(run,true),populationClock());
+  c.append(location,el('h1',p.name),el('p',`${p.gender??'性别未记录'} · ${places[p.birth]} · ${dateAt(0)} · 家庭收入第 ${p.quintile} 组`),art,actions,cohortPanel(run,true),populationClock());
   app.append(c);return
 }
 const top=el('nav',undefined,'life-toolbar');
@@ -347,7 +456,7 @@ left.append(chapter);
 if(!p.ended){
   const controls=el('div',undefined,'play-controls');
   const stepping=el('div',undefined,'row play-primary');
-  const progressState=run.pending.length?'等待选择':playing?'正在推进':'已暂停';
+  const progressState=run.pending.length?'等待选择':playing?(run.auto?'托管推进中':'正在推进'):'已暂停';
   const playButton=button(playing?'暂停':'开始',()=>playing?(stop(),render()):start());
   const nextButton=button(run.pace==='year'?'过一年':'过一个月',()=>{stop();tick()},'muted');
   const jumpButton=button('跳到下一抉择',()=>{
@@ -357,7 +466,12 @@ if(!p.ended){
     save();render();
   },'muted');
   playButton.disabled=nextButton.disabled=jumpButton.disabled=run.pending.length>0;
-  stepping.append(playButton,nextButton,jumpButton,field('步长',[['month','按月递进'],['year','按年递进']],run.pace,v=>{
+  const autoButton=button(run.auto?'退出托管':'一键托管',()=>{
+    if(run.auto){run.auto=false;stop();save();render();}
+    else startAuto();
+  },'auto-toggle');
+  autoButton.setAttribute('aria-pressed',String(run.auto));
+  stepping.append(playButton,autoButton,nextButton,jumpButton,field('步长',[['month','按月递进'],['year','按年递进']],run.pace,v=>{
     run.pace=v;save();if(playing)start();else render();
   }),el('span',progressState,'play-state'));
   const settings=disclosure('更多推进设置');
@@ -365,8 +479,7 @@ if(!p.ended){
   settingsRow.append(
     field('速度',[['1','1×'],['2','2×'],['4','4×'],['8','8×'],['12','12×'],['16','16×']],String(run.speed),v=>{
       run.speed=Number(v);save();if(playing)start();
-    }),
-    button(run.auto?'托管：开':'托管：关',()=>{run.auto=!run.auto;if(run.auto)auto();save();render()},'muted'));
+    }));
   settings.append(settingsRow);
   controls.append(stepping,settings);
   left.append(controls,focusPanel());
@@ -378,8 +491,9 @@ const history=panel('生活记录');
 const log=el('div',undefined,'log life-log');
 log.tabIndex=0;
 p.log.slice().reverse().forEach(entry=>{
-  const line=el('div',undefined,'log-entry'+(entry.kind?' log-'+entry.kind:''));
-  line.append(el('span',entry.age+' 岁'),el('p',entry.text));
+  const line=button(undefined,()=>openEventRecord(entry,line),'log-entry record-button'+(entry.kind?' log-'+entry.kind:''));
+  line.setAttribute('aria-haspopup','dialog');
+  line.append(el('span',entry.age+' 岁'),el('p',(entry.cardId?.startsWith('future-')?'未来推演 · ':'')+entry.text));
   log.append(line);
 });
 history.append(log);left.append(history,provincePanel());
@@ -392,10 +506,12 @@ idBody.append(idName);
 const details=el('dl',undefined,'profile-lines');
 for(const [label,value] of [
   ['出生地',cityLabel(p.birthCity)],
+  ['性别',p.gender??'未记录'],
   ['现居地',cityLabel(p.city)],
   ['家庭收入','第 '+p.quintile+' 组'],
   ['教育',p.education],
   ['工作',p.job],
+  ...(p.occupation?[['职业',p.occupation]]:[]),
   ...(p.careerTrack?[['职业路线',p.careerTrack]]:[]),
 ]){
   const line=el('div');
@@ -453,24 +569,41 @@ if(p.age>=18){
 const family=panel('家人与生活');
 family.classList.add('family-panel');
 for(const member of familyAt(p)){
-  const entry=el('div',undefined,'family-entry');
+  const entry=button(undefined,()=>openFamilyRecord(member,p,entry),'family-entry record-button');
+  entry.setAttribute('aria-haspopup','dialog');
   const detail=member.currentAge>110?'家庭档案':member.currentAge+' 岁 · '+(member.atHome?'同住':'家人')+' · 亲密度 '+(member.bond??p.relationships.family);
-  entry.append(el('strong',member.role),el('span',detail));
+  entry.append(el('strong',member.role+' · '+member.name),el('span',detail));
   family.append(entry);
 }
 const peers=cohortPanel(run);
 const ages=panel('人生地图');
 ages.classList.add('life-years');
-ages.append(el('p','一格 = 一年 · 实色为已经历'),drawAgeGrid(p));
+const ageTip=inspector(ages);
+ages.append(el('p','每格一年 · 悬停或点按查看经历'),drawAgeGrid(p,(age,cell)=>{
+  const events=p.log.filter(entry=>entry.age===age);
+  const lines=age>p.age?['尚未经历']:events.slice(0,4).map(entry=>entry.text);
+  if(!lines.length)lines.push('这一岁暂无生活记录');
+  if(events.length>4)lines.push('另有 '+(events.length-4)+' 条，可在生活记录查看');
+  ageTip(age+' 岁',lines,cell.getBoundingClientRect());
+}));
 const survival=panel('存活曲线');
 survival.classList.add('survival-card');
-survival.append(drawSurvival(p),el('p','实线：当前健康设定 · 虚线：基准健康'),el('p','游戏模型估算 · 圆点标记当前年龄'));
+const survivalTip=inspector(survival);
+survival.append(drawSurvival(p,(age,current,baseline,bounds)=>survivalTip(age+' 岁',[
+  '当前健康 '+p.stats.health+' 分 · 存活率 '+(current*100).toFixed(1)+'%',
+  '基准健康 65 分 · 存活率 '+(baseline*100).toFixed(1)+'%',
+],bounds)),el('p','实线为当前健康，虚线为基准。点按曲线可查看模型估算。'));
 right.append(family,peers,survival,ages);
 if(notice)right.append(el('p',notice,'notice'));
 layout.append(left,identity,right);
 app.append(layout);
 if(decision&&!p.ended&&dismissedDecision!==decision)left.querySelector('dialog').showModal();
 }
+document.addEventListener('pointerdown',event=>{
+  for(const tip of app.querySelectorAll('.inspect-tip:not([hidden])')){
+    if(!tip.parentElement.contains(event.target))tip.hidden=true;
+  }
+});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&playing){stop();render()}});render();
 setInterval(updatePopulationClocks,1000);
 
@@ -488,12 +621,14 @@ function decisionCard(item){
     open.focus();
   };
   const top=el('div',undefined,'decision-header');
-  top.append(el('span','人生抉择 · '+dateAt(run.player.month),'eyebrow'),button('先收起',close,'muted'));
+  const future=card[1].startsWith('future-');
+  top.append(el('span',(future?'未来推演':'人生抉择')+' · '+dateAt(run.player.month),'eyebrow'),button('先收起',close,'muted'));
   modal.addEventListener('cancel',event=>{event.preventDefault();close()});
   const body=el('div',undefined,'decision-body');
   const title=el('h2',card[2]);
   title.id='decision-title';
   body.append(title,el('p',card[3]));
+  if(future)body.append(el('p','这段情境来自游戏对未来生活的设想。','cohort-caption'));
   choiceOptions(card).forEach(([label,detail],index)=>{
     const option=button(undefined,()=>{
       if(run.pending[0]!==item)return;
@@ -507,10 +642,7 @@ function decisionCard(item){
     option.append(el('span',String(index+1),'decision-number'),description);
     body.append(option);
   });
-  body.append(button('交给托管',()=>{
-    run.auto=true;dismissedDecision=null;
-    auto();save();render();
-  },'muted'));
+  body.append(button('交给托管并继续',startAuto,'muted'));
   modal.append(top,body);
   return teaser;
 }
@@ -598,7 +730,7 @@ function endingPanel(entry,archived=false){
   }
   const actions=el('div',undefined,'row');
   const replaySeed=entry.birthGeography==='census2020'?entry.seed:undefined;
-  actions.append(button(replaySeed===undefined?'开始另一段人生':'重走同一起点',()=>startNewLife(entry.mode,entry.birthYear,entry.birthMonth,replaySeed)),
+  actions.append(button(replaySeed===undefined?'开始另一段人生':'重走同一起点',()=>startNewLife(entry.mode,entry.birthYear,entry.birthMonth,replaySeed,{name:entry.player.name,gender:entry.player.gender})),
     button('导出人生档案',()=>exportLife(entry),'muted'));
   if(archived)actions.append(button('返回主界面',returnHome,'muted'));
   section.append(actions);

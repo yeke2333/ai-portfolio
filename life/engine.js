@@ -1,13 +1,43 @@
 import {urbanShare} from './population.js';
 import {cityLabel, drawBirthCity, drawMoveCity} from './geography.js';
-import {cards,places,names,records,eventPools,eventEffects} from './content.js?v=1.3';
+import {cards,places,eventPools,eventEffects} from './content.js?v=1.4';
 import {prepareJourney,rememberChoice,journeyEffect,journeyEligible,settleMonth,journeyBirthday} from './life-systems.js?v=1.3';
-import {contextCards,contextEligible,applyContextChoice,localConditions,studyBudget,recordLifeStage} from './life-context.js?v=1.3';
+import {contextCards,contextEligible,applyContextChoice,localConditions,studyBudget,recordLifeStage} from './life-context.js?v=1.4';
+import {makeIdentity,occupationAt,dailyLife,futureCards,futureEligible,applyFutureChoice} from './life-stories.js?v=1.4';
 const clamp=n=>Math.max(0,Math.min(100,Math.round(n)));
 export const choiceOptions=card=>card.slice(4);
 export const randomChoice=(person,card)=>Math.floor(rand(person)*choiceOptions(card).length);
 const careerTracks=['专业岗位','社区工作','自由职业'];
 const contextIds=new Set(contextCards.map(card=>card[1]));
+const futureIds=new Set(futureCards.map(card=>card[1]));
+
+function refreshOccupation(person){
+  const employed=person.job==='在职'||person.job==='初入职场';
+  if(employed)person.occupation=occupationAt(person);
+}
+
+function logNewOccupation(person,previous){
+  if(person.occupation&&person.occupation!==previous){
+    person.log.push({age:person.age,month:person.month,city:person.city,kind:'milestone',
+      text:'你的工作有了新变化，开始做'+person.occupation+'。'});
+  }
+}
+
+function completeFamily(person){
+  const used=new Set([person.name,...person.family.map(member=>member.name)]);
+  for(const [index,member] of person.family.entries()){
+    if(member.name)continue;
+    const identityRng={rng:(person.identitySeed^Math.imul(index+1,0x85ebca6b))>>>0};
+    const roll=()=>rand(identityRng);
+    const gender=member.role==='母亲'?'女':member.role==='父亲'?'男':
+      member.role==='伴侣'&&person.gender?(person.gender==='女'?'男':'女'):roll()<.5?'女':'男';
+    const sameSurname=['父亲','孩子'].includes(member.role)?person.surname:undefined;
+    let identity=makeIdentity(roll,gender,sameSurname);
+    while(used.has(identity.name))identity=makeIdentity(roll,gender,sameSurname);
+    Object.assign(member,identity);
+    used.add(member.name);
+  }
+}
 
 function updateSchoolStage(person){
   if(person.age<6)return;
@@ -112,22 +142,26 @@ function followUp(person,item) {
   person.log.push({age,month,text,kind:'milestone'});
 }
 export function rand(p){let t=p.rng=(p.rng+0x6d2b79f5)>>>0;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return ((t^(t>>>14))>>>0)/4294967296}
-function person(seed,id,year){let p={id,rng:seed>>>0,age:0,ended:false,stats:{health:65,mood:62,skill:12,ties:55},cash:0,education:'尚未入学',job:'尚未工作',seen:[],log:[],scheduled:[]};p.name=names[Math.floor(rand(p)*names.length)];p.family=[{role:'母亲',age:23+Math.floor(rand(p)*13)},{role:'父亲',age:24+Math.floor(rand(p)*15)}];let n=rand(p);p.place=n<urbanShare(year)?1:3;p.birth=p.place;p.quintile=1+Math.floor(rand(p)*5);p.stats.ties=clamp(50+rand(p)*20);const location = {rng:(seed ^ 0xa341316c) >>> 0};
+function person(seed,id,year){let p={id,rng:seed>>>0,age:0,ended:false,stats:{health:65,mood:62,skill:12,ties:55},cash:0,education:'尚未入学',job:'尚未工作',seen:[],log:[],scheduled:[]};rand(p);p.family=[{role:'母亲',age:23+Math.floor(rand(p)*13)},{role:'父亲',age:24+Math.floor(rand(p)*15)}];let n=rand(p);p.place=n<urbanShare(year)?1:3;p.birth=p.place;p.quintile=1+Math.floor(rand(p)*5);p.stats.ties=clamp(50+rand(p)*20);const location = {rng:(seed ^ 0xa341316c) >>> 0};
 p.city = p.birthCity = drawBirthCity(rand(location), rand(location));
 p.log.push({age:0,text:`你出生在${cityLabel(p.birthCity)}的一个${places[p.place]}家庭。`});return p}
-export function create(mode,seed=crypto.getRandomValues(new Uint32Array(1))[0],birthYear=2002,birthMonth=1){
+export function create(mode,seed=crypto.getRandomValues(new Uint32Array(1))[0],birthYear=2002,birthMonth=1,identity={}){
   if(!Number.isFinite(urbanShare(birthYear))||!Number.isInteger(birthMonth)||birthMonth<1||birthMonth>12){
     throw new RangeError('出生年月超出数据范围');
   }
   const player=person(seed,'p',birthYear);
+  const playerIdentity={rng:(seed^0x7ab18fb3)>>>0};
+  Object.assign(player,makeIdentity(()=>rand(playerIdentity),identity.gender==='男'||identity.gender==='女'?identity.gender:undefined));
+  if(typeof identity.name==='string'&&identity.name.trim()){
+    player.name=Array.from(identity.name.trim()).slice(0,20).join('');
+    player.surname=/^(欧阳|司马|上官)/.exec(player.name)?.[0]??Array.from(player.name)[0];
+  }
   const namesInUse=new Set([player.name]);
   const peers=[1,2,3,4].map(index=>{
-    const peer=person((seed+Math.imul(index,0x9e3779b9))>>>0,'p'+index,birthYear);
-    let nameIndex=names.indexOf(peer.name);
-    while(namesInUse.has(peer.name)){
-      nameIndex=(nameIndex+1)%names.length;
-      peer.name=names[nameIndex];
-    }
+    const peerSeed=(seed+Math.imul(index,0x9e3779b9))>>>0;
+    const peer=person(peerSeed,'p'+index,birthYear);
+    const peerIdentity={rng:(peerSeed^0x7ab18fb3)>>>0};
+    do Object.assign(peer,makeIdentity(()=>rand(peerIdentity)));while(namesInUse.has(peer.name));
     namesInUse.add(peer.name);
     return peer;
   });
@@ -136,6 +170,7 @@ export function create(mode,seed=crypto.getRandomValues(new Uint32Array(1))[0],b
 }
 function releaseChoice(person,id,option){
   const {stats}=person;
+  if(futureIds.has(id)){applyFutureChoice(person,id,option);return;}
   if(contextIds.has(id)){applyContextChoice(person,id,option);return;}
   const eventOptions=eventEffects.get(id);
   if(eventOptions){
@@ -179,9 +214,14 @@ function releaseChoice(person,id,option){
 function effect(p,id,n){let s=p.stats;switch(id){case'playground':p.scheduled.push({age:4,id,option:n});break;case'household':if(!n){p.family.push({role:'伴侣',age:p.age,joinedAt:p.age});s.ties+=5}else s.mood+=4;break;case'parenthood':if(!n)p.scheduled.push({age:p.age+1,id:'child'});else p.cash+=2000;break;case'school':n?s.mood+=4:s.ties+=5;break;case'hobby':n?s.ties+=5:s.skill+=5;break;case'education':p.education=n?'职业教育':'普通教育';s.skill+=n?4:6;if(n)p.cash+=1000;break;case'future':if(n){p.job='初入职场';p.scheduled.push({age:p.age+2,id:'first-job'});}else{p.education='继续学习';s.skill+=7}break;case'move':if(!n){p.cash-=6000;s.ties-=4;s.skill+=3;p.nextPlace=p.place===0?1:0;p.nextCity=drawMoveCity(p.city,rand(p));p.scheduled.push({age:p.age+2,id:'settle'})}else{s.ties+=4;p.scheduled.push({age:p.age+2,id:'local'})}break;case'career':if(n)p.cash+=4000;else s.skill+=6;p.job='在职';break;case'relationship':n?s.mood+=5:s.ties+=6;break;case'home':if(n){p.cash+=5000;s.mood-=2}else{s.ties+=5;p.cash-=2000}break;case'learning':s.skill+=n?3:7;if(!n)p.cash-=3000;break;case'money':if(n){s.mood+=6;p.cash-=2000}else p.cash+=3000;break;case'care':s.ties+=n?3:6;if(n)s.mood+=2;else p.cash-=3000;break;case'retire':if(!n)p.job='退休';else s.mood+=4;break;case'community':n?s.mood+=5:s.ties+=6;break;case'later':n?s.mood+=4:s.ties+=5;break;default:releaseChoice(p,id,n)}
 Object.keys(s).forEach(k=>s[k]=clamp(s[k]));}
 export function resolve(p,card,n){
+  const previousOccupation=p.occupation;
   rememberChoice(p,card,n);effect(p,card[1],n);prepareJourney(p);
+  refreshOccupation(p);
+  completeFamily(p);
   p.seen.push(card[1]);
-  p.log.push({age:p.age,month:p.month,text:`「${card[2]}」你选择了${choiceOptions(card)[n][0]}。`,kind:'decision'});
+  p.log.push({age:p.age,month:p.month,city:p.city,cardId:card[1],option:n,
+    text:`「${card[2]}」你选择了${choiceOptions(card)[n][0]}。`,kind:'decision'});
+  logNewOccupation(p,previousOccupation);
   recordLifeStage(p);
 }
 export function advancePerson(p,focus,isPlayer){if(p.ended)return [];let s=p.stats;const birthday=(p.month+1)%12===0;if(birthday){if(focus==='learn')s.skill+=2;if(focus==='work'){s.skill++;}if(focus==='health')s.health+=2;if(focus==='ties')s.ties+=2;if(p.age>=45)s.health-=1;if(p.healthRoutine)s.health+=1;if(p.job==='在职'&&p.careerTrack==='专业岗位')s.skill+=1;if(p.job==='在职'&&p.careerTrack==='社区工作')s.ties+=1;Object.keys(s).forEach(k=>s[k]=clamp(s[k]));}if(p.age>=18)settleMonth(p,annualIncome(p,focus),annualExpenses(p));
@@ -197,11 +237,19 @@ if(birthday){
   for(const item of p.scheduled.filter(x=>x.age===p.age))followUp(p,item);
   p.scheduled=p.scheduled.filter(x=>x.age!==p.age);
 }
+const previousOccupation=p.occupation;
+refreshOccupation(p);
+logNewOccupation(p,previousOccupation);
+if(birthday)completeFamily(p);
 recordLifeStage(p);
 if(p.age>=110||rand(p)<monthlyRisk(p.month,s.health)){p.ended=true;p.log.push({age:p.age,month:p.month,text:'这一段人生走到了终点。'});recordLifeStage(p,true);return []}
 const budgetDue=p.age>=18&&p.lastBill?.borrowed>0&&p.month>=(p.budgetReview??0);
 if(!birthday&&!budgetDue)return [];
-const decisions=birthday?cards.filter(card=>!eventEffects.has(card[1])&&eligible(p,card)):[];
+const decisions=birthday?cards.filter(card=>!eventEffects.has(card[1])&&!futureIds.has(card[1])&&eligible(p,card)):[];
+if(birthday){
+  const future=futureCards.find(card=>!p.seen.includes(card[1])&&futureEligible(p,card));
+  if(future)decisions.push(future);
+}
 if(budgetDue){
   const repeat=p.seen.includes('budget-pressure');
   const recovery=repeat&&!p.seen.includes('budget-recovery');
@@ -218,8 +266,7 @@ if(decisions.length){
   if(isPlayer)return decisions.map(card=>({kind:"decision",id:card[1]}));
   for(const card of decisions)resolve(p,card,randomChoice(p,card));
 }else if(rand(p)<.32){
-  const lines=p.age<6?["你又认识了院子里的一张新面孔。","熟悉的声音让你在午后安静下来。","你试着自己完成了一件小事。"]:records;
-  p.log.push({age:p.age,month:p.month,text:lines[Math.floor(rand(p)*lines.length)]});
+  p.log.push({age:p.age,month:p.month,city:p.city,text:dailyLife(p,rand(p))});
 }
 return [];
 }
@@ -264,6 +311,8 @@ export function prepareCalendar(run) {
     person.city ??= ((run.seed >>> (i+1)) & 1);
     person.birthCity ??= person.city;
     person.birthYear ??= run.birthYear;
+    person.birthMonth ??= run.birthMonth;
+    person.identitySeed ??= (run.seed^Math.imul(i+1,0x9e3779b9))>>>0;
     if(person.nextCity!==undefined&&person.nextPlace===undefined&&person.seen.includes('move')){
       // Older saves updated the living environment before the scheduled move.
       person.nextPlace=person.place;
@@ -279,6 +328,8 @@ export function prepareCalendar(run) {
       }
     }
     prepareJourney(person);
+    completeFamily(person);
+    refreshOccupation(person);
     if(!person.stages?.[person.age])recordLifeStage(person);
   }
   run.months ??= [{month:run.player.month,city:run.player.city}];

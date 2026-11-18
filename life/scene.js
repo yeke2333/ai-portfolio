@@ -29,7 +29,7 @@ function blocks(ctx){
   };
 }
 
-function sprite(block,x,ground,age,coat){
+function sprite(block,x,ground,age,coat,gender,health){
   const outline='#293d44',skin='#e7aa80',light='#f6ca9f';
   const rect=(dx,dy,w,h,c)=>block(x+dx,ground+dy,w,h,c);
   rect(-9,0,18,2,'#23383855');
@@ -45,13 +45,14 @@ function sprite(block,x,ground,age,coat){
   const hair=age>=65?'#d8d7c1':age>=42?'#4f524d':'#343934';
   rect(-6,top,12,13,outline);rect(-4,top-2,8,3,outline);
   rect(-5,top+1,10,5,hair);rect(-4,top+5,8,7,skin);
+  if(gender==='女'){rect(-6,top+4,2,8,hair);rect(4,top+4,2,8,hair);}
   rect(-3,top+6,6,3,light);rect(-3,top+7,1,2,outline);rect(2,top+7,1,2,outline);
   rect(-8,top+12,16,height-16,outline);rect(-6,top+13,12,height-18,coat);
   rect(-2,top+13,4,2,'#e8dfc7');rect(-1,top+16,2,2,'#f3e5c8');
   rect(-5,-6,4,5,'#435358');rect(1,-6,4,5,'#435358');
   rect(-6,-2,5,2,outline);rect(1,-2,5,2,outline);
   if(age>=65){
-    rect(8,-11,5,2,'#b38e65');rect(11,-11,2,11,'#b38e65');
+    if(health<48){rect(8,-11,5,2,'#b38e65');rect(11,-11,2,11,'#b38e65');}
     rect(-4,top+8,8,1,'#514c40');
   }
 }
@@ -64,7 +65,7 @@ export function drawPortrait(person){
   block(0,0,44,47,'#b9d9d8');
   block(6,8,12,3,'#e7edda');block(29,12,10,3,'#e7edda');
   block(0,37,44,10,'#8da391');block(0,43,44,4,'#657c75');
-  sprite(block,22,41,person.age,'#2e8074');
+  sprite(block,22,41,person.age,'#2e8074',person.gender,person.stats?.health);
   return canvas;
 }
 
@@ -188,11 +189,12 @@ function drawStreet(canvas,person,month,preview){
     const x=(i*37+region*11)%W;
     b(x,117+i%9,3,1,season==='冬'?'#f3dfcf':'#e6c08d');
   }
-  const people=preview?[31,28,9,3]:[...familyAt(person).filter(member=>member.atHome).map(member=>member.currentAge),person.age];
+  const people=preview?[{age:31,gender:'女'},{age:28,gender:'男'},{age:9},{age:3}]:
+    [...familyAt(person).filter(member=>member.atHome).map(member=>({age:member.currentAge,gender:member.gender})),person];
   const coats=['#a45659','#586e88','#8b688d','#bb814b'];
-  people.forEach((age,index)=>{
+  people.forEach(({age,gender,stats},index)=>{
     const x=233+Math.round((index-(people.length-1)/2)*22);
-    sprite(b,x,123,age,index===people.length-1?'#3e8b78':coats[index%coats.length]);
+    sprite(b,x,123,age,index===people.length-1?'#3e8b78':coats[index%coats.length],gender,stats?.health);
   });
   if(!village){
     for(let x=34;x<73;x+=7)b(x,136,3,14,'#a29690');
@@ -224,14 +226,32 @@ export function drawScene(person,month=1){
   return canvas;
 }
 
-export function drawAgeGrid(person) {
+export function drawAgeGrid(person,inspectAge) {
   const grid=document.createElement('div');
   grid.className='age-grid';
   for(let age=0;age<=110;age++){
-    const cell=document.createElement('span');
-    cell.title=age+' 岁';
+    const cell=document.createElement('button');
+    cell.type='button';
+    cell.setAttribute('aria-label',age+' 岁'+(age>person.age?'，尚未经历':'，查看经历'));
+    cell.tabIndex=age===person.age?0:-1;
     if(age<=person.age)cell.classList.add('lived');
     if(age===person.age)cell.classList.add('current');
+    cell.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse')inspectAge(age,cell);});
+    cell.addEventListener('focus',()=>inspectAge(age,cell));
+    cell.addEventListener('click',()=>{
+      grid.querySelector('[tabindex="0"]').tabIndex=-1;
+      cell.tabIndex=0;
+      inspectAge(age,cell);
+    });
+    cell.addEventListener('keydown',event=>{
+      const offsets={ArrowLeft:-1,ArrowRight:1,ArrowUp:-11,ArrowDown:11};
+      if(!Object.hasOwn(offsets,event.key))return;
+      event.preventDefault();
+      const next=grid.children[Math.max(0,Math.min(110,age+offsets[event.key]))];
+      grid.querySelector('[tabindex="0"]').tabIndex=-1;
+      next.tabIndex=0;
+      next.focus();
+    });
     grid.append(cell);
   }
   return grid;
