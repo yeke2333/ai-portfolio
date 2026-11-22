@@ -1,4 +1,4 @@
-import {survivalCurve} from './engine.js?v=1.4';
+import {survivalCurve} from './engine.js?v=1.5';
 
 export function drawSurvival(person,inspect){
   const baseline=survivalCurve();

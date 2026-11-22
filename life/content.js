@@ -1,6 +1,6 @@
 import {eventCards} from './life-events.js';
 import {journeyCards} from './life-systems.js';
-import {contextCards} from './life-context.js?v=1.4';
+import {contextCards} from './life-context.js?v=1.5';
 import {futureCards} from './life-stories.js?v=1.4';
 export {eventPools,eventEffects} from './life-events.js';
 

@@ -1,50 +1,79 @@
-const KEY='life-page.save.v1';
-import {cards,places,focusLabels} from './content.js?v=1.4';
-import {create,resolve,advancePeriod,advanceToDecision,prepareCalendar,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js?v=1.4';
-import {localConditions,studyBudget,sharedStages,stageDifference} from './life-context.js?v=1.4';
+import {cards,places,focusLabels} from './content.js?v=1.5';
+import {create,resolve,advancePeriod,advanceToDecision,advanceToBirthday,annualIncome,annualExpenses,choiceOptions,randomChoice} from './engine.js?v=1.5';
+import {slots,slotKey,backupLimit,readLife,packLife,unpackLife} from './life-storage.js?v=1.5';
+import {localConditions,studyBudget,sharedStages,stageDifference} from './life-context.js?v=1.5';
 import {drawScene,drawTitleScene,seasonFor,drawAgeGrid,drawPortrait,familyAt,lifeStage} from './scene.js?v=1.4';
-import {archiveLife,completedLives,memoir} from './life-archive.js';
-import {drawSurvival} from './survival-view.js?v=1.4';
+import {archiveLife,completedLives,memoir,sameOrigin,lifeChapters} from './life-archive.js?v=1.5';
+import {drawSurvival} from './survival-view.js?v=1.5';
 import {populationSinceOpen,populationClockSource} from './population-clock.js';
-import {monthKey,getMonthHistory} from './history.js';
+import {monthKey,lifeHistory} from './history.js?v=1.5';
 import {censusSource,cities,cityLabel,provinceWeight} from './geography.js';
 import {provinceData,provinceSources} from './province-annual.js';
 import {firstYear,lastYear,urbanShare} from './population.js';
 const dateAt=offset=>monthKey(run.birthYear,offset,run.birthMonth);
 let selectedYear=null,dismissedDecision=null;
+let journalFilter='all',journalQuery='';
 const openSections=new Set();
 const yuan=new Intl.NumberFormat('zh-CN',{style:'currency',currency:'CNY',maximumFractionDigits:0});
 let run=null,playing=false,timer=null,notice='',screen='home';
 const app=document.querySelector('#app');
+let activeSlot=slots[0],expectedSave=null;
+try{
+  const remembered=Number(sessionStorage.getItem('life-page.active-slot'));
+  if(slots.includes(remembered))activeSlot=remembered;
+}catch{}
+
+function selectSlot(slot){
+  activeSlot=slot;
+  try{sessionStorage.setItem('life-page.active-slot',String(slot));}catch{}
+}
 function save(){
   if(!run||screen==='archive')return;
   if(run.player.ended)run.archiveId??=crypto.randomUUID();
-  try{localStorage.setItem(KEY,JSON.stringify(run))}catch{notice='浏览器无法保存这段人生。';return}
+  try{
+    const key=slotKey(activeSlot);
+    if(localStorage.getItem(key)!==expectedSave){
+      stop();
+      notice='这份存档已在另一个页面更新。可先下载本页备份，再返回首页读取最新进度。';
+      return;
+    }
+    const raw=JSON.stringify(run);
+    localStorage.setItem(key,raw);
+    expectedSave=raw;
+  }catch{
+    stop();
+    notice='浏览器无法写入存档。可以下载本页备份以保留进度。';
+    return;
+  }
   if(run.player.ended)try{
     archiveLife(localStorage,run);
   }catch{notice='这段人生已存档，但无法加入历史档案。'}
 }
-function hasSavedData(){try{return localStorage.getItem(KEY)!==null}catch{return false}}
-function read(){
+function read(slot=activeSlot){
+  let raw;
   try{
-    const raw=localStorage.getItem(KEY);
-    if(!raw)return null;
-    const value=JSON.parse(raw);
-    const validPerson=p=>p&&Number.isInteger(p.age)&&p.age>=0&&p.age<=110
-      && Number.isInteger(p.place)&&p.place>=0&&p.place<places.length
-      && p.stats&&['health','mood','skill','ties'].every(key=>Number.isFinite(p.stats[key]))
-      && Array.isArray(p.log)&&Array.isArray(p.seen)&&Array.isArray(p.scheduled);
-    if(![1,2].includes(value?.version)||!validPerson(value.player)||value.peers?.length!==4||!value.peers.every(validPerson)
-      ||!Array.isArray(value.notes)||!Array.isArray(value.pending)||!value.pending.every(item=>item?.kind==='reflection'
-      ||item?.kind==='decision'&&cards.some(card=>card[1]===item.id)))throw Error('存档格式无效');
-    if(value.version===2&&(!Number.isInteger(value.birthYear)||!Array.isArray(value.months)||!Number.isInteger(value.player.month)))throw Error('月历存档无效');
-    return prepareCalendar(value);
-  }catch{notice='旧存档暂时无法读取。你仍可开始新人生。';return null}
+    raw=localStorage.getItem(slotKey(slot));
+    return {raw,life:readLife(raw)};
+  }catch{
+    return {raw,unreadable:true,life:null};
+  }
+}
+function firstFreeSlot(){
+  return slots.find(slot=>read(slot).raw===null);
 }
 function startNewLife(mode,year,month,seed,identity){
-  const previous=read();
-  if((previous&&!previous.player.ended||!previous&&hasSavedData())&&!confirm('开始新人生会替换当前进度，确定继续吗？'))return;
-  if(previous?.player.ended){run=previous;screen='life';save()}
+  const current=read();
+  if(current.unreadable||current.life&&!current.life.player.ended){
+    const free=firstFreeSlot();
+    if(free)selectSlot(free);
+    else{
+      notice='四个位置都已占用。请在存档管理中选择空位、备份后清理一个存档，或选择已结束的人生所在位置。';
+      if(screen!=='home'){stop();screen='home';}
+      render();
+      return;
+    }
+  }
+  expectedSave=read().raw;
   run=create(mode,seed,year,month,identity);
   run.registration=true;selectedYear=null;dismissedDecision=null;
   screen='birth';save();render();
@@ -75,6 +104,68 @@ function el(tag,text,cls){let x=document.createElement(tag);if(text!==undefined)
 function button(label,fn,cls){let b=el('button',label,cls);b.type='button';b.onclick=fn;return b}
 function panel(title){let x=el('section',undefined,'card');if(title)x.append(el('h2',title));return x}
 
+function downloadFile(data,name,type){
+  const link=el('a');
+  link.href=URL.createObjectURL(data instanceof Blob?data:new Blob([data],{type}));
+  link.download=name;
+  link.click();
+  setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+}
+
+function downloadBackup(life){
+  downloadFile(packLife(life),'人生一页-'+life.player.name+'.json','application/json;charset=utf-8');
+}
+
+function storageDesk(){
+  const section=panel('存档管理');
+  section.classList.add('storage-desk');
+  const list=el('div',undefined,'slot-list');
+  for(const slot of slots){
+    const {life,raw,unreadable}=read(slot);
+    const row=el('div',undefined,'slot-row');
+    const title=el('strong','位置 '+slot);
+    const detail=el('small',life?life.player.name+' · '+life.player.age+' 岁'+(life.player.ended?' · 已结束':''):
+      unreadable?'读取失败':'空位');
+    const select=button(undefined,()=>{selectSlot(slot);notice='';render();app.querySelector('.slot-row button[aria-pressed=true]')?.focus();},'muted slot-select');
+    select.setAttribute('aria-pressed',String(activeSlot===slot));
+    select.append(title,detail);
+    row.append(select);
+    if(life||typeof raw==='string'){
+      row.append(button('备份',()=>life?downloadBackup(life):downloadFile(raw,'人生一页-原始存档-'+slot+'.json','application/json'),'muted'));
+      row.append(button('清理',()=>{
+        if(!confirm('清理位置 '+slot+'？可先下载备份。'))return;
+        try{
+          if(localStorage.getItem(slotKey(slot))!==raw)throw new Error();
+          localStorage.removeItem(slotKey(slot));
+          notice='位置 '+slot+' 已清空。';
+        }catch{notice='存档已在其他页面更新，或浏览器拒绝写入。';}
+        render();
+      },'muted'));
+    }
+    list.append(row);
+  }
+  const input=el('input');
+  input.type='file';input.accept='.json,application/json';input.hidden=true;
+  input.addEventListener('change',async ()=>{
+    const file=input.files[0];
+    if(!file)return;
+    try{
+      if(file.size>backupLimit)throw new Error();
+      const life=unpackLife(await file.text());
+      const free=firstFreeSlot();
+      if(!free){notice='导入需要一个空位。现有存档都已保留。';}
+      else{
+        localStorage.setItem(slotKey(free),JSON.stringify(life));
+        selectSlot(free);
+        notice='已导入位置 '+free+'，可继续这段人生。';
+      }
+    }catch{notice='无法导入这份备份。请检查文件格式和存档版本。';}
+    if(screen==='home')render();
+  });
+  section.append(list,button('导入备份',()=>input.click(),'muted'),input);
+  return section;
+}
+
 function inspector(section){
   const tip=el('div',undefined,'inspect-tip');
   tip.setAttribute('role','status');
@@ -104,7 +195,7 @@ function openRecord(title,tag,trigger,fill){
   header.append(el('span',tag,'eyebrow'),button('关闭资料卡',()=>dialog.close(),'muted'));
   const body=el('div',undefined,'decision-body');
   body.append(el('h2',title));
-  fill(body);
+  fill(body,dialog);
   dialog.append(header,body);
   dialog.addEventListener('close',()=>{
     dialog.remove();
@@ -145,14 +236,78 @@ function openEventRecord(entry,trigger){
   const month=entry.month??(entry.age===0?0:undefined);
   const city=entry.city??run.months.find(item=>item.month===month)?.city;
   const time=entry.age+' 岁'+(Number.isInteger(month)?' · '+dateAt(month):'');
-  openRecord(title,tag,trigger,body=>{
+  openRecord(title,tag,trigger,(body,dialog)=>{
     body.append(el('p',time+(city===undefined?'':' · '+cityLabel(city)),'eyebrow'));
     if(card)body.append(el('p',card[3]));
     body.append(el('p',entry.text));
     const options=card?choiceOptions(card):[];
     const option=options[entry.option]??options.find(([label])=>entry.text.endsWith('你选择了'+label+'。'));
     if(option)body.append(el('p','选择影响 · '+option[1]));
+    if(Number.isInteger(entry.index)){
+      const bookmarks=Array.isArray(run.bookmarks)?run.bookmarks:(run.bookmarks=[]);
+      let changed=false;
+      const update=()=>{star.textContent=bookmarks.includes(entry.index)?'取消收藏':'收藏这一刻';};
+      const star=button(undefined,()=>{
+        const index=bookmarks.indexOf(entry.index);
+        if(index>=0)bookmarks.splice(index,1);
+        else bookmarks.push(entry.index);
+        changed=true;save();update();
+      },'muted');
+      update();
+      body.append(star);
+      dialog.addEventListener('close',()=>{
+        if(changed)trigger.closest('.card')?.dispatchEvent(new Event('journalchange'));
+      },{once:true});
+    }
   });
+}
+
+function openHistoryRecord(entry,trigger){
+  openRecord(entry.title,'时代纪事 · '+entry.date,trigger,body=>{
+    body.append(el('p',entry.summary));
+    const source=el('a','查看资料来源');
+    source.href=entry.url;source.target='_blank';source.rel='noopener noreferrer';
+    body.append(source);
+  });
+}
+
+function journalPanel(life){
+  const panelNode=panel('生活记录');
+  const controls=el('div',undefined,'row journal-controls');
+  const search=el('input');
+  search.type='search';search.placeholder='搜索经历';search.setAttribute('aria-label','搜索经历');
+  search.value=journalQuery;
+  const feed=el('div',undefined,'log life-log');
+  feed.tabIndex=0;
+  const moments=life.player.log.map((entry,index)=>({...entry,index})).reverse();
+  const facts=lifeHistory(life);
+  const all=[...moments,...facts].sort((a,b)=>(b.month??b.age*12)-(a.month??a.age*12));
+  function update(){
+    feed.replaceChildren();
+    const query=journalQuery.trim().toLowerCase();
+    for(const entry of all){
+      const type=entry.url?'history':entry.cardId?.startsWith('future-')?'future':entry.kind??'daily';
+      const starred=life.bookmarks?.includes(entry.index);
+      if(journalFilter==='starred'?!starred:journalFilter!=='all'&&journalFilter!==type)continue;
+      const title=entry.title??entry.text;
+      if(query&&![title,String(entry.age),entry.date??''].join(' ').toLowerCase().includes(query))continue;
+      const line=button(undefined,()=>entry.url?openHistoryRecord(entry,line):openEventRecord(entry,line),
+        'log-entry record-button log-'+(entry.kind??type));
+      line.setAttribute('aria-haspopup','dialog');
+      const tag=type==='future'?'未来推演 · ':type==='history'?'史实 · ':'';
+      line.append(el('span',entry.age+' 岁'),el('p',(starred?'★ ':'')+tag+title));
+      feed.append(line);
+    }
+    if(!feed.children.length)feed.append(el('p','没有符合条件的记录。','cohort-caption'));
+  }
+  search.addEventListener('input',()=>{journalQuery=search.value;update();});
+  panelNode.addEventListener('journalchange',()=>{update();feed.focus({preventScroll:true});});
+  controls.append(field('分类',[['all','全部'],['starred','已收藏'],['decision','抉择'],['milestone','人生节点'],['daily','日常'],['history','史实'],['future','未来推演']],journalFilter,value=>{
+    journalFilter=value;update();
+  }),search);
+  panelNode.append(controls,feed);
+  update();
+  return panelNode;
 }
 function disclosure(title){
   const details=el('details',undefined,'card life-details');
@@ -269,10 +424,10 @@ function openPeerHistory(life,peer,trigger,index){
   dialog.showModal();
 }
 
-function cohortComparison(life,peer){
+function cohortComparison(life,peer,labels=['同龄对照','你 · '+life.player.name,peer.name]){
   const player=life.player;
   const section=el('section',undefined,'cohort-comparison');
-  section.append(el('h3','同龄对照'));
+  section.append(el('h3',labels[0]));
   const stages=sharedStages(player,peer);
   if(!stages.length){
     section.append(el('p','这两位角色暂无同龄阶段记录。旧档会从续玩时开始积累。'));
@@ -284,7 +439,7 @@ function cohortComparison(life,peer){
     : '现有的同龄记录尚无升学、职业、迁居或家庭分岔。';
   const table=el('table');
   const header=el('tr');
-  for(const label of ['阶段','你 · '+player.name,peer.name]){
+  for(const label of ['阶段',...labels.slice(1)]){
     const cell=el('th',label);cell.scope='col';header.append(cell);
   }
   const head=el('thead');head.append(header);
@@ -341,7 +496,7 @@ function homePage(){
   const title=el('h1','人生');
   title.setAttribute('aria-label','人生一页');
   title.append(el('span','一页'));
-  intro.append(el('div','中国人生模拟 / 公开试玩 1.4','eyebrow home-issue'),title,
+  intro.append(el('div','中国人生模拟 / 1.5','eyebrow home-issue'),title,
     el('p','选一个年月，让出生地交给运气。从陌生的街巷出发，在每一次选择里，走出自己的一生。','home-deck'));
   const setup=el('div',undefined,'home-setup');
   setup.append(
@@ -356,13 +511,16 @@ function homePage(){
   nameLabel.append(name);
   identity.append(field('性别',[['','随机'],['女','女'],['男','男']],gender,value=>{gender=value}),nameLabel);
   actions.append(button('随机出生',()=>startNewLife(mode,year,birthMonth,undefined,{gender,name:name.value}),'birth-action'));
-  const saved=read();
+  const saved=read().life;
   if(saved)actions.append(button('继续上次人生',()=>{
-    run=saved;selectedYear=null;dismissedDecision=null;screen=run.registration?'birth':'life';stop();
+    const latest=read();
+    if(!latest.life){notice='该位置的进度已变化，请重新选择存档。';render();return;}
+    run=latest.life;expectedSave=latest.raw;selectedYear=null;dismissedDecision=null;screen=run.registration?'birth':'life';stop();
     if(run.player.ended)save();
     render();
   },'muted'));
-  intro.append(setup,identity,actions,populationClock());
+  actions.append(button('管理存档',()=>app.querySelector('.storage-desk').scrollIntoView({block:'start'}),'muted'));
+  intro.append(setup,identity,actions,el('p','当前存档位 '+activeSlot,'cohort-caption'),populationClock());
   if(notice)intro.append(el('p',notice,'notice'));
 
   const right=el('div',undefined,'home-right');
@@ -404,7 +562,7 @@ function homePage(){
   const source=el('a','国家统计局 · 第七次全国人口普查');
   source.href=censusSource;
   info.append(el('p','出生覆盖中国大陆 31 个省级地区。省级权重按 2020 年常住人口计算，省内主要城市样本等概率抽取。角色家庭和抉择为模拟设定，真实事件单独标注。'),source);
-  records.append(archiveShelf(),info);
+  records.append(storageDesk(),archiveShelf(),info);
   extras.append(atlas,records);
   app.append(hero,extras);
 }
@@ -435,8 +593,10 @@ if(screen==='birth'){
 const top=el('nav',undefined,'life-toolbar');
 top.setAttribute('aria-label','人生导航');
 const position=el('div',undefined,'life-position');
-position.append(el('span',p.ended?'已归档 / LIFE JOURNAL':'人生进行中 / LIFE JOURNAL','eyebrow'),el('strong',dateAt(p.month),'toolbar-age'));
-top.append(position,button('返回主界面',returnHome,'muted return-home'));
+position.append(el('span',(p.ended?'已归档':'人生进行中')+' · 存档 '+activeSlot,'eyebrow'),el('strong',dateAt(p.month),'toolbar-age'));
+const topActions=el('div',undefined,'row');
+topActions.append(button('备份进度',()=>downloadBackup(run),'muted'),button('返回主界面',returnHome,'muted return-home'));
+top.append(position,topActions);
 app.append(top);
 
 const layout=el('div',undefined,'grid life-grid');
@@ -476,10 +636,16 @@ if(!p.ended){
   }),el('span',progressState,'play-state'));
   const settings=disclosure('更多推进设置');
   const settingsRow=el('div',undefined,'row');
+  const birthday=button('快进到下个生日',()=>{
+    stop();run=advanceToBirthday(run);selectedYear=null;
+    if(run.auto)auto();
+    save();render();
+  },'muted');
+  birthday.disabled=run.pending.length>0;
   settingsRow.append(
     field('速度',[['1','1×'],['2','2×'],['4','4×'],['8','8×'],['12','12×'],['16','16×']],String(run.speed),v=>{
       run.speed=Number(v);save();if(playing)start();
-    }));
+    }),birthday);
   settings.append(settingsRow);
   controls.append(stepping,settings);
   left.append(controls,focusPanel());
@@ -487,16 +653,7 @@ if(!p.ended){
 const decision=run.pending[0];
 if(decision&&!p.ended)left.append(decisionCard(decision));
 if(p.ended)left.append(endingPanel(run));
-const history=panel('生活记录');
-const log=el('div',undefined,'log life-log');
-log.tabIndex=0;
-p.log.slice().reverse().forEach(entry=>{
-  const line=button(undefined,()=>openEventRecord(entry,line),'log-entry record-button'+(entry.kind?' log-'+entry.kind:''));
-  line.setAttribute('aria-haspopup','dialog');
-  line.append(el('span',entry.age+' 岁'),el('p',(entry.cardId?.startsWith('future-')?'未来推演 · ':'')+entry.text));
-  log.append(line);
-});
-history.append(log);left.append(history,provincePanel());
+left.append(journalPanel(run),provincePanel());
 const profile=panel('身份记录');
 profile.classList.add('profile-card');
 const idBody=el('div',undefined,'id-body');
@@ -696,13 +853,26 @@ function exportLife(entry){
   const text=[
     player.name+' 的人生',summary.start+' 至 '+summary.end+' · '+summary.from+' → '+summary.to,
     ...player.log.map(item=>(item.month===undefined?item.age+' 岁':date(item.month))+' · '+item.text),
-    ...entry.months.flatMap(m=>getMonthHistory(date(m.month),m.city).map(fact=>fact.date+' · 史实：'+fact.title+' '+fact.url)),
+    ...lifeHistory(entry).map(fact=>fact.date+' · 史实：'+fact.title+' '+fact.url),
     ...entry.notes.filter(note=>note.text).map(note=>note.age+' 岁的笔记：'+note.text),
   ].join('\n');
-  const link=el('a');
-  link.href=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));
-  link.download='人生一页-'+player.name+'.txt';
-  link.click();setTimeout(()=>URL.revokeObjectURL(link.href),1000);
+  downloadFile(text,'人生一页-'+player.name+'.txt','text/plain;charset=utf-8');
+}
+
+function downloadLifeCard(entry,summary){
+  const canvas=el('canvas');
+  canvas.width=960;canvas.height=680;
+  const ctx=canvas.getContext('2d');
+  const art=drawScene(entry.player,Number(summary.end.slice(-2)));
+  ctx.fillStyle='#f3f6fa';ctx.fillRect(0,0,960,680);
+  ctx.fillStyle='#213048';
+  ctx.font='600 28px sans-serif';ctx.fillText('人生一页',44,61);
+  ctx.font='700 54px sans-serif';ctx.fillText(entry.player.name+' 的一生',44,130,872);
+  ctx.font='24px sans-serif';ctx.fillText(summary.start+' 至 '+summary.end+'  ·  '+entry.player.age+' 岁',44,179,872);
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(art,44,220,872,362);
+  ctx.font='24px sans-serif';ctx.fillText(summary.from+' → '+summary.to,44,635,872);
+  canvas.toBlob(blob=>{if(blob)downloadFile(blob,'人生一页-'+entry.player.name+'.png','image/png');});
 }
 
 function endingPanel(entry,archived=false){
@@ -722,16 +892,30 @@ function endingPanel(entry,archived=false){
     const cell=el('div');cell.append(el('dt',label),el('dd',value));metrics.append(cell);
   }
   section.append(metrics);
-  if(summary.moments.length){
-    section.append(el('h3','这一路的几个片段'));
+  for(const {label,entries} of lifeChapters(entry.player.log)){
+    const chapter=el('details',undefined,'ending-chapter');
+    chapter.append(el('summary',label));
     const list=el('ol');
-    for(const item of summary.moments)list.append(el('li',item.age+' 岁 · '+item.text));
-    section.append(list);
+    for(const item of entries)list.append(el('li',item.age+' 岁 · '+item.text));
+    chapter.append(list);
+    section.append(chapter);
+  }
+  let earlier=[];
+  try{earlier=completedLives(localStorage).filter(other=>other.archiveId!==entry.archiveId&&sameOrigin(entry,other));}catch{}
+  if(earlier.length){
+    const slot=el('div',undefined,'replay-comparison');
+    const show=index=>{
+      const previous=earlier[Number(index)];
+      slot.replaceChildren(cohortComparison(entry,previous.player,['同一起点对照','这一次','上一次']));
+    };
+    section.append(field('对照档案',earlier.map((other,i)=>[String(i),'第 '+(i+1)+' 段 · '+other.player.age+' 岁']), '0',show),slot);
+    show(0);
   }
   const actions=el('div',undefined,'row');
   const replaySeed=entry.birthGeography==='census2020'?entry.seed:undefined;
   actions.append(button(replaySeed===undefined?'开始另一段人生':'重走同一起点',()=>startNewLife(entry.mode,entry.birthYear,entry.birthMonth,replaySeed,{name:entry.player.name,gender:entry.player.gender})),
-    button('导出人生档案',()=>exportLife(entry),'muted'));
+    button('导出人生档案',()=>exportLife(entry),'muted'),
+    button('下载结局卡',()=>downloadLifeCard(entry,summary),'muted'));
   if(archived)actions.append(button('返回主界面',returnHome,'muted'));
   section.append(actions);
   return section;

@@ -36,3 +36,20 @@ export function memoir(run){
     moments:(moments.length?moments:decisions).slice(-5),
   };
 }
+
+export function sameOrigin(first,second){
+  return first.birthGeography==='census2020'&&second.birthGeography===first.birthGeography&&Number.isInteger(first.seed)
+    && first.seed===second.seed&&first.birthYear===second.birthYear&&first.birthMonth===second.birthMonth
+    && first.player.birthCity===second.player.birthCity&&first.player.birth===second.player.birth;
+}
+
+export function lifeChapters(log){
+  return [
+    ['童年',0,12],['少年',12,18],['成年',18,40],['中年',40,65],['晚年',65,111],
+  ].flatMap(([label,from,to])=>{
+    const entries=log.filter(entry=>entry.age>=from&&entry.age<to);
+    if(!entries.length)return [];
+    const selected=entries.filter(entry=>entry.kind==='milestone'||entry.kind==='decision');
+    return [{label,entries:(selected.length?selected:entries).slice(0,4)}];
+  });
+}

@@ -223,3 +223,21 @@ input:focus-visible,.survival-card svg:focus-visible { outline:2px solid #3873a8
   box-shadow:0 6px 26px #273d6430; font-size:13px;
 }
 .inspect-tip p { margin:3px 0 0; font-size:12px; }
+.storage-desk { scroll-margin-top:16px; }
+.slot-list { display:grid; gap:7px; margin:0 0 12px; }
+.slot-row { display:flex; align-items:stretch; gap:6px; }
+.slot-row button { padding:6px 10px; font-size:13px; }
+.slot-row .slot-select { flex:1; min-width:0; text-align:left; }
+.slot-select small { display:block; color:var(--muted-ink); overflow-wrap:anywhere; }
+.slot-select[aria-pressed="true"] { background:#eaf4f2; border-color:var(--teal); }
+.journal-controls { margin-bottom:10px; }
+.journal-controls input { flex:1; min-width:90px; padding:7px 9px; font:inherit; }
+.log-history p { color:#295787; }
+.ending-chapter { border-bottom:1px solid var(--rule); padding:8px 2px; }
+.ending-chapter summary { cursor:pointer; font-weight:650; }
+.ending-panel .row { margin-top:15px; }
+.replay-comparison { margin:8px 0 12px; }
+@media(max-width:600px) {
+  .life-toolbar .row { justify-content:flex-end; gap:6px; }
+  .life-toolbar .row button { padding:6px 8px; font-size:12px; }
+}
