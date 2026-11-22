@@ -7,6 +7,7 @@ import {archiveLife,completedLives,memoir,sameOrigin,lifeChapters} from './life-
 import {drawSurvival} from './survival-view.js?v=1.5';
 import {populationSinceOpen,populationClockSource} from './population-clock.js';
 import {monthKey,lifeHistory} from './history.js?v=1.5';
+import {isParent,familyBiography} from './family-biography.js?v=1.5.1';
 import {censusSource,cities,cityLabel,provinceWeight} from './geography.js';
 import {provinceData,provinceSources} from './province-annual.js';
 import {firstYear,lastYear,urbanShare} from './population.js';
@@ -208,24 +209,59 @@ function openRecord(title,tag,trigger,fill){
   dialog.showModal();
 }
 
-function openFamilyRecord(member,person,trigger){
-  openRecord(member.name,'家人资料 · '+member.role,trigger,body=>{
-    const isParent=member.role==='母亲'||member.role==='父亲';
+function openFamilyRecord(life,member,index,trigger){
+  const person=life.player;
+  const parent=isParent(member);
+  const biography=parent||member.role==='伴侣'?familyBiography(life,member,index):null;
+  openRecord(member.name??member.role,'家人资料 · '+member.role,trigger,body=>{
     const facts=el('dl',undefined,'cohort-facts');
     const details=[
       ['与主角关系',member.role],['性别',member.gender??'未记录'],
+      ...(biography?[
+        ['出生年份',biography.birthYear+' 年'],['出生地',cityLabel(biography.birthCity)],
+        ['教育',biography.education],['职业',biography.occupation],['生活爱好',biography.interest],
+      ]:[]),
       ['年龄',member.currentAge>110?'档案年龄超过显示范围':member.currentAge+' 岁'],
-      ['亲密度',String(member.bond??person.relationships.family)],
+      ['亲密度',String(member.bond??person.relationships?.family??'未记录')],
       ['家庭状态',member.atHome?'同住':'分开居住'],
-      [isParent?'进入档案':'加入家庭',isParent?'主角出生时':(member.joinedAt??0)+' 岁'],
+      [parent?'进入档案':'加入家庭',parent?'主角出生时':'主角 '+(member.joinedAt??0)+' 岁'],
     ];
     for(const [label,value] of details){
       const line=el('div');
       line.append(el('dt',label),el('dd',value));
       facts.append(line);
     }
-    body.append(drawPortrait({age:member.currentAge,gender:member.gender}),facts);
+    const portrait=drawPortrait({age:member.currentAge,gender:member.gender});
+    body.querySelector('h2').before(portrait);
+    body.append(facts);
+    if(biography){
+      body.append(el('h3','从出生开始的人生记录'),el('p','早年背景由游戏生成，家庭节点随本局经历更新。','cohort-footnote'));
+      const timeline=el('ol',undefined,'cohort-timeline family-timeline');
+      for(const entry of biography.chapters){
+        const row=el('li',undefined,'log-entry'+(entry.shared?' log-milestone':''));
+        const when=el('span',entry.age+' 岁');
+        when.append(el('small',entry.date));
+        const narrative=el('div');
+        narrative.append(el('strong',entry.title),el('p',entry.text));
+        row.append(when,narrative);timeline.append(row);
+      }
+      body.append(timeline);
+    }
   });
+}
+
+function familyPanel(life,parentsOnly=false){
+  const section=panel(parentsOnly?'出生家庭':'家人与生活');
+  section.classList.add('family-panel');
+  for(const [index,member] of familyAt(life.player).entries()){
+    if(parentsOnly&&!isParent(member))continue;
+    const entry=button(undefined,()=>openFamilyRecord(life,member,index,entry),'family-entry record-button');
+    entry.setAttribute('aria-haspopup','dialog');
+    const detail=member.currentAge>110?'家庭档案':member.currentAge+' 岁 · '+(member.atHome?'同住':'家人');
+    entry.append(el('strong',member.name?member.role+' · '+member.name:member.role),el('span',detail+' · 亲密度 '+(member.bond??life.player.relationships?.family??'未记录')));
+    section.append(entry);
+  }
+  return section;
 }
 
 function openEventRecord(entry,trigger){
@@ -587,7 +623,7 @@ if(screen==='birth'){
   art.append(drawScene(p,run.birthMonth),el('figcaption',cityLabel(p.birthCity)+' / '+seasonFor(run.birthMonth)[1]));
   const actions=el('div',undefined,'row register-actions');
   actions.append(button('开始这段人生',()=>{run.registration=false;screen='life';save();render()}),button('返回主界面',returnHome,'muted'));
-  c.append(location,el('h1',p.name),el('p',`${p.gender??'性别未记录'} · ${places[p.birth]} · ${dateAt(0)} · 家庭收入第 ${p.quintile} 组`),art,actions,cohortPanel(run,true),populationClock());
+  c.append(location,el('h1',p.name),el('p',`${p.gender??'性别未记录'} · ${places[p.birth]} · ${dateAt(0)} · 家庭收入第 ${p.quintile} 组`),art,actions,familyPanel(run,true),cohortPanel(run,true),populationClock());
   app.append(c);return
 }
 const top=el('nav',undefined,'life-toolbar');
@@ -723,15 +759,7 @@ if(p.age>=18){
   budget.append(el('small','模拟规则 · 借款月息 0.3%，月度收支结余的 20% 自动还款。'));
   left.append(budget);
 }
-const family=panel('家人与生活');
-family.classList.add('family-panel');
-for(const member of familyAt(p)){
-  const entry=button(undefined,()=>openFamilyRecord(member,p,entry),'family-entry record-button');
-  entry.setAttribute('aria-haspopup','dialog');
-  const detail=member.currentAge>110?'家庭档案':member.currentAge+' 岁 · '+(member.atHome?'同住':'家人')+' · 亲密度 '+(member.bond??p.relationships.family);
-  entry.append(el('strong',member.role+' · '+member.name),el('span',detail));
-  family.append(entry);
-}
+const family=familyPanel(run);
 const peers=cohortPanel(run);
 const ages=panel('人生地图');
 ages.classList.add('life-years');
@@ -886,6 +914,7 @@ function endingPanel(entry,archived=false){
     const art=el('figure',undefined,'register-art');
     art.append(drawScene(entry.player,Number(summary.end.slice(-2))));
     section.append(art);
+    if(entry.player.family?.length)section.append(familyPanel(entry));
   }
   const metrics=el('dl',undefined,'ending-metrics');
   for(const [label,value] of [['走过的年龄',entry.player.age+' 岁'],['做出的抉择',summary.decisions+' 次'],['生活过的城市',summary.places+' 座']]){

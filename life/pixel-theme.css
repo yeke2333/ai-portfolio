@@ -130,6 +130,11 @@ select,textarea,.muted { color:var(--ink); border-color:#b8ac9a; background:var(
 .cohort-timeline { margin:0; padding:0; }
 .cohort-timeline .log-entry { grid-template-columns:4.5em minmax(0,1fr); border-color:var(--rule); }
 .cohort-timeline small { display:block; font:11px/1.3 var(--mono); }
+.family-timeline .log-entry { padding-block:10px; }
+.family-timeline .log-entry strong { font-size:14px; }
+.family-timeline .log-entry p { margin:2px 0 0; color:var(--muted-ink); }
+.family-panel .family-entry:hover strong { color:var(--teal); }
+.birth-register .family-panel,.ending-panel .family-panel { margin-block:18px; }
 .cohort-comparison { padding:12px 0; border-block:1px solid var(--rule); }
 .cohort-comparison p { margin:4px 0 10px; font-size:13px; }
 .cohort-comparison table { width:100%; border-collapse:collapse; margin-top:8px; font-size:13px; }
