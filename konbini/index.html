@@ -1,2 +1,39 @@
 <!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#111627"><title>雨の角 · Midnight Konbini</title><meta name="description" content="两层街角便利店、暖灯窄巷与雨水倒影。可自由旋转缩放的日式微缩景观。"><style>*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111627}body{background:radial-gradient(ellipse at 50% 45%,#30354b 0%,#1c2135 43%,#101522 85%)}canvas{display:block;width:100%;height:100%;touch-action:none;outline:none;cursor:grab}canvas:active{cursor:grabbing}</style></head><body><script type="module" src="./scene.js"></script></body></html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111627">
+  <meta name="description" content="两层街角便利店、暖灯窄巷与雨水倒影。可自由旋转缩放的日式微缩景观。">
+  <title>雨の角 · Midnight Konbini</title>
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml">
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #111627; }
+    body { background: radial-gradient(ellipse at 50% 45%, #30354b 0%, #1c2135 43%, #101522 85%); }
+    canvas { display: block; width: 100%; height: 100%; touch-action: none; outline: none; cursor: grab; }
+    canvas:active { cursor: grabbing; }
+    .back {
+      position: fixed;
+      z-index: 1;
+      inset: max(12px, env(safe-area-inset-top)) auto auto max(12px, env(safe-area-inset-left));
+      display: inline-flex;
+      align-items: center;
+      min-height: 44px;
+      padding: 0 13px;
+      border: 1px solid #596274;
+      border-radius: 8px;
+      color: #f5f6fa;
+      background: #151c2b;
+      font: 600 13px system-ui, sans-serif;
+      text-decoration: none;
+    }
+    .back:hover { background: #283246; }
+    .back:focus-visible { outline: 2px solid #f5f6fa; outline-offset: 4px; }
+  </style>
+</head>
+<body>
+  <a class="back" href="../">← 返回作品集</a>
+  <script type="module" src="./scene.js"></script>
+</body>
+</html>
