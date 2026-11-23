@@ -3,7 +3,7 @@ import {cityLabel, drawBirthCity, drawMoveCity} from './geography.js';
 import {cards,places,eventPools,eventEffects} from './content.js?v=1.5';
 import {prepareJourney,rememberChoice,journeyEffect,journeyEligible,settleMonth,journeyBirthday} from './life-systems.js?v=1.3';
 import {contextCards,contextEligible,applyContextChoice,localConditions,studyBudget,recordLifeStage} from './life-context.js?v=1.5';
-import {makeIdentity,occupationAt,dailyLife,futureCards,futureEligible,applyFutureChoice} from './life-stories.js?v=1.4';
+import {makeIdentity,occupationAt,dailyLife,futureCards,futureEligible,applyFutureChoice} from './life-stories.js?v=1.5.2';
 const clamp=n=>Math.max(0,Math.min(100,Math.round(n)));
 export const choiceOptions=card=>card.slice(4);
 export const randomChoice=(person,card)=>Math.floor(rand(person)*choiceOptions(card).length);
@@ -13,7 +13,7 @@ const futureIds=new Set(futureCards.map(card=>card[1]));
 
 function refreshOccupation(person){
   const employed=person.job==='在职'||person.job==='初入职场';
-  if(employed)person.occupation=person.chosenOccupation??occupationAt(person);
+  if(employed)person.occupation=person.chosenOccupation??person.occupation??occupationAt(person);
 }
 
 function logNewOccupation(person,previous){
@@ -194,6 +194,10 @@ function releaseChoice(person,id,option){
       if(id==='internship'&&!option)person.cash+=4500;
       break;
     case 'career-track':
+      if(person.careerTrack!==careerTracks[option]){
+        delete person.occupation;
+        delete person.chosenOccupation;
+      }
       person.careerTrack=careerTracks[option];person.job='在职';
       if(option===2)stats.mood+=5;
       break;

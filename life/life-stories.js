@@ -10,16 +10,7 @@ export function makeIdentity(roll,gender=roll()<.5?'女':'男',surname=pick(surn
   return {gender,surname,name:surname+pick(givenNames[gender],roll())};
 }
 
-const professions={
-  专业岗位:['会计','设备工程师','软件测试员','建筑绘图员'],
-  社区工作:['社区工作人员','公务员','公共图书馆馆员','养老服务协调员'],
-  自由职业:['社区小店店主','摄影师','家电维修个体户','家政服务经营者'],
-  入门:['餐厅服务员','商超理货员','仓库管理员','车间装配工','客服专员'],
-};
-export function occupationAt(person){
-  const options=professions[person.careerTrack]??professions.入门;
-  return options[((person.birthCity??0)+(person.quintile??0))%options.length];
-}
+export {occupationAt} from './life-careers.js?v=1.5.2';
 
 export function dailyLife(person,roll){
   const age=person.age;

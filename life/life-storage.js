@@ -1,5 +1,5 @@
 import {cards,places} from './content.js?v=1.5';
-import {prepareCalendar} from './engine.js?v=1.5';
+import {prepareCalendar} from './engine.js?v=1.5.2';
 import {cities} from './geography.js';
 
 export const slots=[1,2,3,4];

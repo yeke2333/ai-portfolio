@@ -1,14 +1,6 @@
 import {cities,cityLabel} from './geography.js';
 import {monthKey} from './history.js?v=1.5';
-
-const careers=[
-  {education:'初中',job:'机修工',start:17,firstJob:'在修理铺照看工具、跟着师傅学拆装。'},
-  {education:'中职',job:'商店营业员',start:18,firstJob:'在商店站柜台，打烊时和同事一起清点货架。'},
-  {education:'高中',job:'仓库管理员',start:18,firstJob:'先学着核对收货单，再独立负责一排货架。'},
-  {education:'大专',job:'社区工作人员',start:21,firstJob:'在社区窗口接待居民，逐项记录还没办完的事。'},
-  {education:'本科',job:'会计',start:22,firstJob:'从整理原始凭证做起，第一次月底结账忙到很晚。'},
-  {education:'本科',job:'小学教师',start:22,firstJob:'接手第一个班，回家后还在给学生的作业写评语。'},
-];
+import {familyCareer} from './life-careers.js?v=1.5.2';
 const childhood=[
   '第一次自己走到学校，在校门口等同桌一起进教室。',
   '上学路上要经过一段小坡，下雨时总记得绕开积水。',
@@ -45,14 +37,15 @@ export function familyBiography(life,member,index){
   const province=cities[joinedCity??player.birthCity]?.province;
   const nearby=cities.flatMap((city,id)=>city.province===province?[id]:[]);
   const birthCity=nearby[roll(nearby.length)]??player.birthCity;
-  const career=careers[roll(careers.length)];
+  const career=familyCareer(birthYear,roll(4294967296)/4294967296,player.birth===3);
   const schoolScene=childhood[roll(childhood.length)];
   const [interest,interestScene]=interests[roll(interests.length)];
   const interestAge=career.start+1+roll(3);
   const retirementAge=60+roll(5);
   const age=Math.min(110,member.currentAge);
+  const graduationAge={初中:15,中职:18,高中:18,大专:21,本科:22}[career.education];
   const education=age<6?'学龄前':age<15?'基础教育在读':
-    age<career.start?career.education+'在读':career.education;
+    age<graduationAge?career.education+'在读':career.education;
   const occupation=age<career.start?'尚未工作':age>=retirementAge?'已退休 · 曾任'+career.job:career.job;
   const chapters=[];
   function add(eventAge,title,text,date=String(birthYear+eventAge),shared=false){
@@ -61,7 +54,7 @@ export function familyBiography(life,member,index){
   add(0,'出生','出生在'+cityLabel(birthCity)+'。');
   add(6,'开始上学',schoolScene);
   add(15,'读完初中',career.education==='初中'?'结束学校生活，开始打听附近的学徒机会。':'决定继续升学，准备下一阶段的课程。');
-  add(career.start,'第一份工作',career.firstJob);
+  add(career.start,'第一份工作','开始做'+career.job+'。'+career.firstJob);
   add(interestAge,'工作之外',interestScene);
   add(retirementAge,'退休后的生活','离开'+career.job+'岗位后，把更多空闲时间留给'+interest+'。');
   add(member.age,parent?'主角出生':'与主角开始共同生活',parent
