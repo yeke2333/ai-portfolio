@@ -62,7 +62,6 @@ h1 {
   letter-spacing: -.065em;
   font-weight: 850;
 }
-h1 span { color: #50664b; }
 .lead { max-width: 26em; color: var(--muted); font-size: 1.05rem; }
 .featured { margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--line); }
 .featured h2 { margin: 2px 0 6px; font-size: clamp(1.85rem, 3vw, 2.55rem); letter-spacing: -.04em; line-height: 1.25; }
